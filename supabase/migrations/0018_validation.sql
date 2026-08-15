@@ -1,0 +1,3 @@
+-- 0018 Validation
+-- Restrições de integridade adicionais podem ser adicionadas aqui
+-- (ex.: CHECK (expires_at > started_at) em simulado_attempts).

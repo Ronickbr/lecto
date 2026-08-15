@@ -1,0 +1,3 @@
+-- 0016 Cron
+-- Nenhum job agendado (pg_cron) necessário no momento.
+-- Exemplo futuro: expirar attempts/simulados pendentes ou assinaturas trial.

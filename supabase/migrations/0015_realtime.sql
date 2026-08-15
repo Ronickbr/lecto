@@ -1,0 +1,3 @@
+-- 0015 Realtime
+-- Nenhuma tabela necessita de replicação realtime no momento.
+-- Para habilitar futuramente: ALTER PUBLICATION supabase_realtime ADD TABLE public.<tabela>;
