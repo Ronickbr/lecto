@@ -74,3 +74,23 @@ export async function assertCanManageStudent(
     if (!allowed.has(id)) throw new Error("Você só pode gerenciar alunos das suas turmas");
   }
 }
+
+/**
+ * Resolve a escola associada para geração de conteúdo por IA.
+ */
+export async function resolveSchoolIdForGeneration(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<string> {
+  const { data: ownSchool } = await supabase.rpc("user_school_id", { _user_id: userId });
+  if (ownSchool) return ownSchool;
+
+  const { data: isSuper } = await supabase.rpc("is_super_admin", { _user_id: userId });
+  if (isSuper) {
+    const { data: school } = await supabase.from("schools").select("id").limit(1).single();
+    if (school?.id) return school.id;
+  }
+
+  throw new Error("Escola não associada para geração de conteúdo");
+}
+

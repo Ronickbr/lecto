@@ -117,8 +117,32 @@ Para rodar os testes automatizados com o Playwright:
 npx playwright test
 ```
 
+## 🐳 Deploy no Dokploy
+
+O projeto já está 100% configurado com um `Dockerfile` multi-stage otimizado para deploy direto no **Dokploy**.
+
+### Passo a Passo no Painel do Dokploy:
+
+1. **Novo Aplicativo**: Crie uma nova aplicação no Dokploy apontando para o repositório `https://github.com/Ronickbr/lecto.git` (branch `main`).
+2. **Build Type**: Selecione **Dockerfile**.
+3. **Porta**: Defina a porta de aplicação para `3000`.
+4. **Variáveis de Ambiente (Environment Variables)**: Adicione as variáveis do seu Supabase:
+
+   ```env
+   SUPABASE_URL=https://api-supa.rnbconsultoria.tech
+   SUPABASE_PUBLISHABLE_KEY=seu_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=seu_service_role_key
+   VITE_SUPABASE_URL=https://api-supa.rnbconsultoria.tech
+   VITE_SUPABASE_PUBLISHABLE_KEY=seu_anon_key
+   PORT=3000
+   HOST=0.0.0.0
+   ```
+
+5. **Deploy**: Clique em **Deploy**. O Dokploy compilará e executará a imagem sem nenhum erro.
+
 ---
 
 ## 📄 Licença
 
 Este projeto é um software proprietário desenvolvido para a plataforma **Lecto**. Todos os direitos reservados.
+

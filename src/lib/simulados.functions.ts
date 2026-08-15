@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { generateObject } from "ai";
 import { createAiProvider, getAiModel } from "./ai-gateway.server";
-import { assertCanManageSchool, resolveSchoolIdForGeneration } from "./authorization.server";
+import { assertCanManageSchool, resolveSchoolIdForGeneration } from "./manage.server";
 import { PIRLS_PROCESSES, GeneratedPayload, GenerateInput, ReorderInput } from "./simulados.server";
 
 /** Generate a balanced PIRLS text + questions and (optionally) insert as a new page in a simulado. */

@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { assertCanManageSchool } from "./authorization.server";
+import { assertCanManageSchool } from "./manage.server";
 import { buildRubric, GenerateRubricInput, GenerateMissingRubricsInput } from "./rubrics.server";
 
 /**
