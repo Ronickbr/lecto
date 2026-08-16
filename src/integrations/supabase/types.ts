@@ -56,6 +56,63 @@ export type Database = {
           },
         ];
       };
+      checkouts: {
+        Row: {
+          amount_cents: number;
+          checkout_url: string | null;
+          created_at: string;
+          external_reference: string;
+          id: string;
+          paid_at: string | null;
+          payload: Json;
+          plan_id: string;
+          provider: string;
+          school_id: string;
+          status: string;
+        };
+        Insert: {
+          amount_cents: number;
+          checkout_url?: string | null;
+          created_at?: string;
+          external_reference: string;
+          id?: string;
+          paid_at?: string | null;
+          payload?: Json;
+          plan_id: string;
+          provider?: string;
+          school_id: string;
+          status?: string;
+        };
+        Update: {
+          amount_cents?: number;
+          checkout_url?: string | null;
+          created_at?: string;
+          external_reference?: string;
+          id?: string;
+          paid_at?: string | null;
+          payload?: Json;
+          plan_id?: string;
+          provider?: string;
+          school_id?: string;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "checkouts_plan_id_fkey";
+            columns: ["plan_id"];
+            isOneToOne: false;
+            referencedRelation: "plans";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "checkouts_school_id_fkey";
+            columns: ["school_id"];
+            isOneToOne: false;
+            referencedRelation: "schools";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       logs: {
         Row: {
           action: string;

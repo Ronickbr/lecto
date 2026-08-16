@@ -1,6 +1,9 @@
 import { useState, useTransition, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { testAiConnectionFn } from "@/lib/ai-gateway.functions";
+import { testIntegrationFn } from "@/lib/integrations.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -207,6 +210,8 @@ const MOCK_AUDIT_LOGS = [
 
 function SuperAdminSettingsPage() {
   const qc = useQueryClient();
+  const testAiConnection = useServerFn(testAiConnectionFn);
+  const testIntegrationRemote = useServerFn(testIntegrationFn);
   const [activeTab, setActiveTab] = useState("general");
   const [searchQuery, setSearchQuery] = useState("");
   const [settings, setSettings] = useState<SystemSettingsState>(DEFAULT_SETTINGS);
@@ -337,6 +342,44 @@ function SuperAdminSettingsPage() {
   }
 
   function testIntegration(serviceName: string) {
+    // Teste real via server function para os provedores de IA configurados no servidor.
+    if (serviceName === "OpenRouter API" || serviceName === "OpenAI API") {
+      toast.promise(testAiConnection({}), {
+        loading: `Testando conexão com ${serviceName}...`,
+        success: (res) => {
+          if (res.ok) return `Conexão com ${serviceName} válida (HTTP ${res.status}).`;
+          return `Falha na conexão com ${serviceName}: ${res.message}`;
+        },
+        error: (err: Error) => `Falha ao testar ${serviceName}: ${err.message}`,
+      });
+      return;
+    }
+
+    // Testes reais via server function para Mercado Pago, InfinityPay e Resend.
+    const serviceKey =
+      serviceName === "Mercado Pago"
+        ? ("mercadopago" as const)
+        : serviceName === "InfinityPay"
+          ? ("infinitypay" as const)
+          : serviceName === "Resend Mailer"
+            ? ("resend" as const)
+            : null;
+
+    if (serviceKey) {
+      toast.promise(testIntegrationRemote({ data: { services: [serviceKey] } }), {
+        loading: `Testando conexão com ${serviceName}...`,
+        success: (results) => {
+          const res = results[0];
+          if (res?.ok)
+            return `Conexão com ${serviceName} válida (HTTP ${res.status}). ${res.message}`;
+          return `Falha na conexão com ${serviceName}: ${res?.message ?? "Erro desconhecido"}`;
+        },
+        error: (err: Error) => `Falha ao testar ${serviceName}: ${err.message}`,
+      });
+      return;
+    }
+
+    // Integração desconhecida — apenas simula o check.
     toast.promise(new Promise((res) => setTimeout(res, 1200)), {
       loading: `Testando conexão com ${serviceName}...`,
       success: `Conexão com ${serviceName} realizada com sucesso! (Status 200 OK)`,

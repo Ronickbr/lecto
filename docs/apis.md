@@ -47,13 +47,21 @@ O módulo `src/lib/ai-gateway.server.ts` centraliza o acesso a modelos de IA via
 
 ### Checkout de pagamento
 
-O handler `checkoutWebhook` (em `src/lib/webhooks.checkout.functions.ts`) processa eventos de pagamento (Mercado Pago/InfinityPay). É um **server function POST** com as seguintes garantias de segurança:
+Os webhooks de pagamento são **rotas HTTP puras** (fora de serverFn), interceptadas no entrypoint `src/server.ts` antes do SSR — necessárias porque os provedores enviam a assinatura em header/query e seguem contratos próprios.
 
-- **Assinatura**: verifica HMAC-SHA256 do corpo usando `WEBHOOK_SECRET` (env). O campo `signature` no payload deve conter o hex da assinatura.
-- **Idempotência**: eventos duplicados (mesmo `id`) são ignorados via tabela `webhook_events`.
-- **Escopo**: apenas atualiza o status da assinatura da escola para `active` em pagamentos `paid`/`active`.
+| Rota | Provedor | Assinatura |
+| :--- | :--- | :--- |
+| `POST /api/webhooks/mercadopago` | Mercado Pago | `x-signature` (`ts=...,v1=...`) + `x-request-id` + `data.id` na query → HMAC-SHA256 da string canônica `id:[data.id];request-id:[x-request-id];ts:[ts];` |
+| `POST /api/webhooks/infinitypay` | InfinityPay | Sem assinatura; validação por `order_nsu` (deve corresponder a um checkout real) + idempotência por `transaction_nsu` |
 
-> **Nota:** para provedores que enviam a assinatura em header HTTP (não no corpo), é necessário expor uma rota HTTP pura (fora de serverFn). Planejado para iteração futura.
+**Garantias comuns** (em `src/lib/payment-processing.server.ts`):
+
+- **Idempotência**: eventos duplicados (mesmo `eventId`) são ignorados via tabela `webhook_events`.
+- **Mapeamento**: o `external_reference`/`order_nsu` aponta para a tabela `checkouts`, que guarda `school_id` + `plan_id` + `amount_cents`.
+- **Ativação**: pagamento confirmado ativa a assinatura — upsert em `subscriptions` (status `active`, expiração 30 dias) **e** atualiza `schools.subscription_status`/`plan_id`/`subscription_expires_at` (painel admin).
+- **Ledger**: `checkouts.status` vai para `paid` com `paid_at`.
+
+> **Mercado Pago**: o payload do webhook pode vir truncado; o handler consulta `GET /v1/payments/{data.id}` para obter o `external_reference` confiável.
 
 ## Integrações externas
 
@@ -62,7 +70,16 @@ O handler `checkoutWebhook` (em `src/lib/webhooks.checkout.functions.ts`) proces
 | Supabase (banco) | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Cliente admin (server). |
 | Supabase (auth) | `SUPABASE_PUBLISHABLE_KEY` | Cliente autenticado (server + client). |
 | IA (OpenRouter/OpenAI) | `AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL` | Geração/correção de simulados. |
-| Webhooks de pagamento | `WEBHOOK_SECRET` | Verificação de assinatura. |
+| Webhooks de pagamento | `WEBHOOK_SECRET`, `MERCADO_PAGO_ACCESS_TOKEN` (e opcional `MERCADO_PAGO_WEBHOOK_SECRET`) | Verificação de assinatura dos webhooks. |
+| Mercado Pago (checkout) | `MERCADO_PAGO_ACCESS_TOKEN` | Criação de preferências (Checkout Pro). |
+| InfinityPay (checkout) | `INFINITYPAY_HANDLE` | Criação de links via `api.checkout.infinitepay.io` (sem API key). |
+| Resend (e-mails) | `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | E-mails transacionais (auth/notificações) via `src/lib/resend.server.ts`. |
+
+## Server functions de integração
+
+- `testIntegrationFn` (`src/lib/integrations.functions.ts`): testa conexão real de `mercadopago`, `infinitypay` e `resend`. Apenas super admin.
+- `createCheckoutFn` (`src/lib/integrations.functions.ts`): cria um pedido na tabela `checkouts` e gera o link/checkout no provedor (`mercado_pago` ou `infinitypay`), retornando `checkoutUrl`. Apenas super admin.
+- `testAiConnectionFn` (`src/lib/ai-gateway.functions.ts`): testa a conexão de IA (`AI_BASE_URL`/`AI_API_KEY`).
 
 ## Checklist para novas server functions
 
