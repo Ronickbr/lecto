@@ -70,13 +70,22 @@ function PlansPage() {
 
       if (error) throw error;
     },
+    onMutate: async (updated: Plan) => {
+      await queryClient.cancelQueries({ queryKey: ["admin-plans"] });
+      const previous = queryClient.getQueryData<Plan[]>(["admin-plans"]);
+      queryClient.setQueryData<Plan[]>(["admin-plans"], (old) =>
+        (old ?? []).map((p) => (p.id === updated.id ? { ...p, ...updated } : p)),
+      );
+      return { previous };
+    },
+    onError: (err: Error, _updated, context) => {
+      if (context?.previous) queryClient.setQueryData(["admin-plans"], context.previous);
+      toast.error(`Erro ao atualizar plano: ${err.message}`);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-plans"] });
       toast.success("Plano atualizado com sucesso!");
       setEditingPlan(null);
-    },
-    onError: (err: Error) => {
-      toast.error(`Erro ao atualizar plano: ${err.message}`);
     },
   });
 
