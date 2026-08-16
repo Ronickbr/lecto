@@ -133,7 +133,12 @@ function PlansPage() {
                 </div>
 
                 <ul className="space-y-1.5 pt-2">
-                  {(p.features as string[]).map((f) => (
+                  {[
+                    `${p.max_schools} ${p.max_schools === 1 ? "escola" : "escolas"}`,
+                    `${p.max_teachers} professores`,
+                    `${p.max_students} alunos`,
+                    `${p.max_simulados_month} simulados/mês`,
+                  ].map((f) => (
                     <li key={f} className="flex items-start gap-2">
                       <Check className="mt-0.5 size-4 shrink-0 text-primary" />
                       <span>{f}</span>
