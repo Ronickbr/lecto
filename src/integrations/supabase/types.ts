@@ -991,6 +991,36 @@ export type Database = {
           },
         ];
       };
+      webhook_events: {
+        Row: {
+          event_type: string;
+          id: string;
+          payload: Json;
+          processed_at: string;
+          provider: string;
+          status: string;
+          transaction_id: string;
+        };
+        Insert: {
+          event_type: string;
+          id: string;
+          payload?: Json;
+          processed_at?: string;
+          provider?: string;
+          status?: string;
+          transaction_id: string;
+        };
+        Update: {
+          event_type?: string;
+          id?: string;
+          payload?: Json;
+          processed_at?: string;
+          provider?: string;
+          status?: string;
+          transaction_id?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       questions_safe: {

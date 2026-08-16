@@ -1,0 +1,28 @@
+name: Feature request
+description: Sugira uma nova funcionalidade ou melhoria
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Problema / Motivação
+      description: Qual problema essa funcionalidade resolve? Quem é o público-alvo (super admin, gestor, professor, aluno)?
+    validations:
+      required: true
+  - type: textarea
+    id: solucao
+    attributes:
+      label: Solução proposta
+      description: Descreva o comportamento desejado, incluindo fluxos e telas envolvidas.
+    validations:
+      required: true
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: Alternativas consideradas
+      description: Outras abordagens que você avaliou.
+  - type: textarea
+    id: impactos
+    attributes:
+      label: Impactos
+      description: Impacto em banco de dados (migrations), RLS, APIs, testes e desempenho.

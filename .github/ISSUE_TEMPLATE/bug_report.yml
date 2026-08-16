@@ -1,0 +1,53 @@
+name: Bug report
+description: Reporte um bug para nos ajudar a melhorar
+labels: [bug]
+body:
+  - type: textarea
+    id: descricao
+    attributes:
+      label: Descrição
+      description: O que aconteceu e o que era esperado?
+      placeholder: Descreva o bug...
+    validations:
+      required: true
+  - type: input
+    id: ambiente
+    attributes:
+      label: Ambiente
+      description: Navegador, sistema operacional, dispositivo, versão do app/deploy.
+      placeholder: "Ex.: Chrome 130, Windows 11, production"
+    validations:
+      required: true
+  - type: textarea
+    id: passos
+    attributes:
+      label: Passos para reproduzir
+      description: Passo a passo para reproduzir o problema.
+      placeholder: |
+        1. Acessar ...
+        2. Clicar em ...
+        3. Ver o erro ...
+    validations:
+      required: true
+  - type: dropdown
+    id: modulo
+    attributes:
+      label: Módulo afetado
+      multiple: true
+      options:
+        - Autenticação / Login do aluno
+        - Perfil do usuário
+        - Admin (usuários, escolas, configurações)
+        - Professor (simulados, correção, resultados)
+        - Aluno (simulado, resultado, progresso)
+        - Dashboards / Relatórios
+        - Banco de dados / RLS
+        - Deploy / Infraestrutura
+        - Outro
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Screenshots
+      description: Cole logs do console, erros de rede ou screenshots, se disponíveis.

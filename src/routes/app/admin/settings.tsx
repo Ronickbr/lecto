@@ -127,7 +127,7 @@ const DEFAULT_SETTINGS: SystemSettingsState = {
   timezone: "America/Sao_Paulo",
   defaultLanguage: "pt-BR",
   maintenanceMode: false,
-  publicApiKey: "pk_live_lecto_998877665544332211",
+  publicApiKey: "",
 
   enforce2FA: false,
   minPasswordLength: 8,
@@ -253,12 +253,21 @@ function SuperAdminSettingsPage() {
   // Salvar no Supabase
   const saveMutation = useMutation({
     mutationFn: async (newSettings: SystemSettingsState) => {
-      // Salva no banco de dados na tabela platform_settings
-      const entries = Object.entries(newSettings).map(([key, value]) => ({
-        key,
-        value: typeof value === "object" && value !== null ? value : { val: value },
-        updated_at: new Date().toISOString(),
-      }));
+      // Segredos de integração não são persistidos no banco: são gerenciados
+      // exclusivamente via variáveis de ambiente no servidor (ver src/lib/ai-gateway.server.ts).
+      const SECRET_KEYS = new Set([
+        "openrouterApiKey",
+        "openaiApiKey",
+        "mercadoPagoAccessToken",
+        "resendApiKey",
+      ]);
+      const entries = Object.entries(newSettings)
+        .filter(([key]) => !SECRET_KEYS.has(key))
+        .map(([key, value]) => ({
+          key,
+          value: typeof value === "object" && value !== null ? value : { val: value },
+          updated_at: new Date().toISOString(),
+        }));
 
       for (const entry of entries) {
         const { error } = await supabase
@@ -1069,7 +1078,9 @@ function SuperAdminSettingsPage() {
                 <Cpu className="size-5 text-purple-500" /> Integrações & APIs de Terceiros
               </CardTitle>
               <CardDescription>
-                Gerenciamento seguro de chaves secretas com máscara visual e teste de conectividade.
+                As chaves secretas de integração são gerenciadas exclusivamente por variáveis de
+                ambiente no servidor (ex.: <code>AI_API_KEY</code>, <code>WEBHOOK_SECRET</code>). Os
+                campos abaixo são apenas de visualização e não são persistidos no banco de dados.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -1093,8 +1104,8 @@ function SuperAdminSettingsPage() {
                   <Input
                     type={showSecretKeys["openrouter"] ? "text" : "password"}
                     value={settings.openrouterApiKey}
-                    onChange={(e) => setSettings({ ...settings, openrouterApiKey: e.target.value })}
-                    className="pr-10 font-mono text-xs rounded-xl"
+                    readOnly
+                    className="pr-10 font-mono text-xs rounded-xl bg-muted/40"
                   />
                   <button
                     type="button"
@@ -1130,8 +1141,8 @@ function SuperAdminSettingsPage() {
                   <Input
                     type={showSecretKeys["openai"] ? "text" : "password"}
                     value={settings.openaiApiKey}
-                    onChange={(e) => setSettings({ ...settings, openaiApiKey: e.target.value })}
-                    className="pr-10 font-mono text-xs rounded-xl"
+                    readOnly
+                    className="pr-10 font-mono text-xs rounded-xl bg-muted/40"
                   />
                   <button
                     type="button"
@@ -1167,10 +1178,8 @@ function SuperAdminSettingsPage() {
                   <Input
                     type={showSecretKeys["mercadopago"] ? "text" : "password"}
                     value={settings.mercadoPagoAccessToken}
-                    onChange={(e) =>
-                      setSettings({ ...settings, mercadoPagoAccessToken: e.target.value })
-                    }
-                    className="pr-10 font-mono text-xs rounded-xl"
+                    readOnly
+                    className="pr-10 font-mono text-xs rounded-xl bg-muted/40"
                   />
                   <button
                     type="button"
@@ -1279,8 +1288,8 @@ function SuperAdminSettingsPage() {
                   <Input
                     type={showSecretKeys["resend"] ? "text" : "password"}
                     value={settings.resendApiKey}
-                    onChange={(e) => setSettings({ ...settings, resendApiKey: e.target.value })}
-                    className="pr-10 font-mono text-xs rounded-xl"
+                    readOnly
+                    className="pr-10 font-mono text-xs rounded-xl bg-muted/40"
                   />
                   <button
                     type="button"

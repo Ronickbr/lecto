@@ -1,5 +1,5 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "lecto",
   "version": "1.0.0",
   "private": true,
   "sideEffects": false,
@@ -10,6 +10,8 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "bun run typecheck",
     "format": "prettier --write .",
     "test:e2e": "playwright test",
     "test:e2e:public": "playwright test tests/e2e/responsive-public.spec.ts",
@@ -18,6 +20,10 @@
     "test:e2e:functional": "playwright test tests/e2e/functional-public.spec.ts tests/e2e/functional-app.spec.ts",
     "test:e2e:functional:public": "playwright test tests/e2e/functional-public.spec.ts",
     "test:e2e:functional:app": "playwright test tests/e2e/functional-app.spec.ts"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "bun": ">=1.0.0"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.14",

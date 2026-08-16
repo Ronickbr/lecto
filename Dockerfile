@@ -1,23 +1,21 @@
-# Stage 1: Build
-FROM node:20-alpine AS builder
+# Stage 1: Build (Bun é o gerenciador oficial do projeto)
+FROM oven/bun:1-alpine AS builder
 
 WORKDIR /app
 
-# Enable corepack
-RUN corepack enable
+# Copy manifests
+COPY package.json bun.lock* ./
 
-# Copy package manifest
-COPY package.json package-lock.json* ./
-
-# Install dependencies
-RUN npm ci || npm install
+# Install dependencies (frozen quando há lockfile)
+RUN if [ -f bun.lock ]; then bun install --frozen-lockfile; else bun install; fi
 
 # Copy source files
 COPY . .
 
-# Build TanStack Start production output
+# Build TanStack Start for Node.js (Nitro preset node-server)
 ENV NODE_ENV=production
-RUN npm run build
+ENV NITRO_PRESET=node-server
+RUN bun run build
 
 # Stage 2: Production Runner
 FROM node:20-alpine AS runner

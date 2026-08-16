@@ -5,6 +5,10 @@ import tailwindcss from "@tailwindcss/vite";
 
 const NITRO_DEFAULT_PRESET_MIN = [3, 0, 260603];
 
+// Preset de produção configurável por ambiente (ex.: NITRO_PRESET=node-server
+// no Dokploy/Vercel ou NITRO_PRESET=cloudflare-module para Cloudflare Workers).
+const NITRO_PRESET = process.env.NITRO_PRESET ?? "node-server";
+
 async function nitroSupportsDefaultPreset() {
   try {
     const { createRequire } = await import("node:module");
@@ -55,9 +59,9 @@ export default defineConfig(async ({ mode, command }) => {
 
   if (command === "build") {
     const { nitro } = await import("nitro/vite");
-    const nitroOpts: Record<string, unknown> = { defaultPreset: "cloudflare-module" };
+    const nitroOpts: Record<string, unknown> = { defaultPreset: NITRO_PRESET };
     if (!nitroOpts.preset && !(await nitroSupportsDefaultPreset())) {
-      nitroOpts.preset = "cloudflare-module";
+      nitroOpts.preset = NITRO_PRESET;
     }
     plugins.push(nitro(nitroOpts as never));
   }

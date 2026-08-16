@@ -47,4 +47,7 @@ test-results
 full_vps_*.sql
 supabase/.temp/
 supabase/.branches/
+.vercel/
+.vercel/output
+.vercel/cache
 

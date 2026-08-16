@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { PageHeader, StatCard } from "@/components/admin/stat-card";
 import { useAdminSchools } from "@/lib/admin/queries";
+import { listGlobalUsersFn } from "@/lib/admin/global-users.functions";
 import { shortDate, num } from "@/lib/admin/format";
 import { Search } from "lucide-react";
 
@@ -41,80 +42,25 @@ function UsersPage() {
   const { data: schools } = useAdminSchools();
   const [q, setQ] = useState("");
   const [role, setRole] = useState("all");
+  const listGlobalUsers = useServerFn(listGlobalUsersFn);
 
   const { data } = useQuery({
     queryKey: ["admin-global-users"],
-    queryFn: async () => {
-      const [roles, profiles, teachers, students] = await Promise.all([
-        supabase.from("user_roles").select("user_id, role, school_id, created_at"),
-        supabase.from("profiles").select("id, full_name, email, created_at"),
-        supabase.from("teachers").select("user_id, full_name, email, school_id, created_at"),
-        supabase.from("students").select("id, full_name, school_id, created_at, user_id"),
-      ]);
-      return {
-        roles: roles.data ?? [],
-        profiles: profiles.data ?? [],
-        teachers: teachers.data ?? [],
-        students: students.data ?? [],
-      };
-    },
+    queryFn: () => listGlobalUsers(),
   });
 
   const schoolName = useMemo(() => new Map((schools ?? []).map((s) => [s.id, s.name])), [schools]);
 
   const users = useMemo(() => {
     if (!data) return [];
-    const identity = new Map<string, { name: string; email: string; created_at: string }>();
-    data.profiles.forEach((p) =>
-      identity.set(p.id, {
-        name: p.full_name ?? "—",
-        email: p.email ?? "—",
-        created_at: p.created_at,
-      }),
-    );
-    data.teachers.forEach((t) => {
-      if (!t.user_id) return;
-      const existing = identity.get(t.user_id);
-      if (!existing || existing.name === "—" || existing.email === "—") {
-        identity.set(t.user_id, {
-          name: existing && existing.name !== "—" ? existing.name : t.full_name,
-          email: existing && existing.email !== "—" ? existing.email : t.email,
-          created_at: existing?.created_at ?? t.created_at,
-        });
-      }
-    });
-    data.students.forEach((s) => {
-      if (!s.user_id) return;
-      if (!identity.has(s.user_id)) {
-        identity.set(s.user_id, {
-          name: s.full_name,
-          email: "—",
-          created_at: s.created_at,
-        });
-      }
-    });
-    const staff = data.roles.map((r) => {
-      const id = identity.get(r.user_id);
-      return {
-        key: `${r.user_id}-${r.role}`,
-        name: id?.name ?? "—",
-        email: id?.email ?? "—",
-        role: r.role as string,
-        school: r.school_id ? (schoolName.get(r.school_id) ?? "—") : "Plataforma",
-        created_at: id?.created_at ?? r.created_at,
-      };
-    });
-    const studentRows = data.students
-      .filter((s) => !s.user_id)
-      .map((s) => ({
-        key: `st-${s.id}`,
-        name: s.full_name,
-        email: "—",
-        role: "student",
-        school: schoolName.get(s.school_id) ?? "—",
-        created_at: s.created_at,
-      }));
-    return [...staff, ...studentRows].sort((a, b) => b.created_at.localeCompare(a.created_at));
+    return data.map((u) => ({
+      key: `${u.userId}-${u.role}`,
+      name: u.name ?? "—",
+      email: u.email ?? "—",
+      role: u.role,
+      school: u.schoolId ? (schoolName.get(u.schoolId) ?? "—") : "Plataforma",
+      created_at: u.createdAt,
+    }));
   }, [data, schoolName]);
 
   const list = users.filter(

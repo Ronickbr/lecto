@@ -1,0 +1,30 @@
+name: Security report
+description: Reporte uma vulnerabilidade de segurança (não abra um issue público)
+labels: [security]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Aviso
+        **NÃO** abra este formulário para vulnerabilidades ativas que possam ser exploradas.
+        Para relatos confidenciais, envie um e-mail para a equipe de segurança (ver SECURITY.md).
+        Use este template apenas para descrever preocupações de hardening sem expor dados sensíveis.
+  - type: textarea
+    id: descricao
+    attributes:
+      label: Descrição da preocupação de segurança
+      description: Descreva o problema sem incluir credenciais, tokens ou dados de produção.
+    validations:
+      required: true
+  - type: input
+    id: componente
+    attributes:
+      label: Componente afetado
+      description: Ex.: RLS em students, webhook de checkout, server functions, env vars.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Como reproduzir (se aplicável)
+      description: Passos que demonstrariam o problema em um ambiente de teste/homologação.

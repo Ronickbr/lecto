@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { SignInSchema, CreateStudentSchema } from "./students.schemas.server";
+import { rateLimit } from "./rate-limit.server";
 
 // ============================================================
 // PUBLIC: Student sign-in via class_code + student_code + PIN
@@ -10,9 +12,27 @@ import { SignInSchema, CreateStudentSchema } from "./students.schemas.server";
 // through supabase.auth.signInWithPassword.
 // ============================================================
 
+const PIN_RATE_LIMIT = {
+  maxAttempts: 5,
+  windowMs: 5 * 60 * 1000, // 5 attempts per 5 minutes
+  lockMs: 15 * 60 * 1000, // then lock for 15 minutes
+};
+
 export const studentSignInFn = createServerFn({ method: "POST" })
   .validator((raw: unknown) => SignInSchema.parse(raw))
   .handler(async ({ data }) => {
+    const request = getRequest();
+    const ip = request?.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const bucket = rateLimit({
+      key: `pin:${ip}:${data.classCode}:${data.studentCode}`,
+      maxAttempts: PIN_RATE_LIMIT.maxAttempts,
+      windowMs: PIN_RATE_LIMIT.windowMs,
+      lockMs: PIN_RATE_LIMIT.lockMs,
+    });
+    if (!bucket.allowed) {
+      throw new Error("Muitas tentativas. Tente novamente em alguns minutos.");
+    }
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: klass } = await supabaseAdmin
