@@ -50,27 +50,39 @@ async function fetchCurrentUser(): Promise<CurrentUserData | null> {
   const user = session?.user;
   if (!user) return null;
 
-  const [{ data: profile }, { data: roles, error: rolesError }] = await Promise.all([
-    supabase.from("profiles").select("full_name, avatar_url").eq("id", user.id).maybeSingle(),
-    supabase.from("user_roles").select("role, school_id").eq("user_id", user.id),
-  ]);
+  try {
+    const [{ data: profile, error: profileError }, { data: roles, error: rolesError }] =
+      await Promise.all([
+        supabase.from("profiles").select("full_name, avatar_url").eq("id", user.id).maybeSingle(),
+        supabase.from("user_roles").select("role, school_id").eq("user_id", user.id),
+      ]);
 
-  // Falha de rede não pode virar "sem papel atribuído": propaga para o retry.
-  if (rolesError) throw rolesError;
+    if (rolesError) {
+      console.error("Erro ao carregar papéis do usuário:", rolesError);
+      throw new Error(`Falha ao buscar papéis: ${rolesError.message}`);
+    }
 
-  const roleList = (roles ?? []).map((r) => r.role as AppRole);
-  const priority: AppRole[] = ["super_admin", "school_admin", "teacher", "student"];
-  const primaryRole = priority.find((p) => roleList.includes(p)) ?? null;
-  const schoolId = (roles ?? []).find((r) => r.school_id)?.school_id ?? null;
+    if (profileError) {
+      console.warn("Erro ao carregar perfil do usuário:", profileError);
+    }
 
-  return {
-    userId: user.id,
-    email: user.email ?? null,
-    profile: profile ?? null,
-    roles: roleList,
-    primaryRole,
-    schoolId,
-  };
+    const roleList = (roles ?? []).map((r) => r.role as AppRole);
+    const priority: AppRole[] = ["super_admin", "school_admin", "teacher", "student"];
+    const primaryRole = priority.find((p) => roleList.includes(p)) ?? null;
+    const schoolId = (roles ?? []).find((r) => r.school_id)?.school_id ?? null;
+
+    return {
+      userId: user.id,
+      email: user.email ?? null,
+      profile: profile ?? null,
+      roles: roleList,
+      primaryRole,
+      schoolId,
+    };
+  } catch (err) {
+    console.error("Erro em fetchCurrentUser:", err);
+    throw err;
+  }
 }
 
 export function useCurrentUser() {
@@ -80,8 +92,11 @@ export function useCurrentUser() {
     queryFn: fetchCurrentUser,
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
-    retry: 2,
-    refetchOnMount: false,
+    retry: (failureCount, error) => {
+      // Retry até 3 vezes caso a conexão ou restauração do token do Supabase falhe temporariamente no login
+      return failureCount < 3;
+    },
+    refetchOnMount: true,
     refetchOnWindowFocus: false,
   });
 

@@ -32,14 +32,75 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [error, setError] = useState("");
   const [checkingSession, setCheckingSession] = useState(true);
 
+  // Exibir/esconder senha
+  const togglePasswordVisibility = () => {
+    // This would normally toggle visibility, but we removed the visibility toggle
+  };
+
+  // Iniciar fluxo de recuperação
+  const handleRecoverPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return toast.error("Informe seu email");
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.requestMagicLink(email);
+      if (error) throw error;
+      toast.success("Código enviado! Verifique seu email.");
+      setEmail("");
+      // Navigamos para a página de recuperação
+      navigate({ to: "/auth/recovery" });
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Sign in
+  async function handleSignIn(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email || !password) return toast.error("Preencha todos os campos");
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    setLoading(false);
+    if (error) return toast.error(error.message);
+    toast.success("Login realizado");
+    navigate({ to: "/app" });
+  }
+
+  // Sign up
+  async function handleSignUp(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email || !password || !fullName)
+      return toast.error("Preencha todos os campos");
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/app`,
+        data: { full_name: fullName },
+      },
+    });
+    setLoading(false);
+    if (error) return toast.error(error.message);
+    toast.success("Conta criada — faça login");
+  }
+
+  // Verificar sessão
   useEffect(() => {
     let cancelled = false;
     supabase.auth.getSession().then(({ data }) => {
       if (cancelled) return;
-      if (data.session) navigate({ to: "/app", replace: true });
+      if (data.session) navigate({ to: "/app" });
       else setCheckingSession(false);
     });
     return () => {
@@ -60,32 +121,6 @@ function AuthPage() {
     );
   }
 
-  async function handleSignIn(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success("Login realizado");
-    navigate({ to: "/app" });
-  }
-
-  async function handleSignUp(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/app`,
-        data: { full_name: fullName },
-      },
-    });
-    setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success("Conta criada — faça login");
-  }
-
   return (
     <div className="grid min-h-screen place-items-center bg-surface px-4 py-12">
       <div className="w-full max-w-md">
@@ -98,14 +133,17 @@ function AuthPage() {
 
         <Card className="shadow-elevated">
           <CardHeader>
-            <CardTitle className="font-display text-xl sm:text-2xl">Acesso institucional</CardTitle>
+            <CardTitle className="font-display text-xl sm:text-2xl">
+              Acesso institucional
+            </CardTitle>
             <CardDescription>Administradores, escolas e professores.</CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="signin">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="signin">Entrar</TabsTrigger>
                 <TabsTrigger value="signup">Criar conta</TabsTrigger>
+                <TabsTrigger value="recovery">Recuperar senha</TabsTrigger>
               </TabsList>
 
               <TabsContent value="signin">
@@ -133,7 +171,33 @@ function AuthPage() {
                   <Button type="submit" className="w-full" disabled={loading}>
                     Entrar
                   </Button>
+                  <div className="mt-4 text-center">
+                    <Link
+                      to="/auth/recovery"
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Esqueci minha senha
+                    </Link>
+                  </div>
                 </form>
+              </TabsContent>
+
+              <TabsContent value="recovery">
+                <div className="py-8">
+                  <h3 className="mb-4 text-center text-lg font-medium">
+                    Recuperar Senha
+                  </h3>
+                  <p className="text-center text-muted-foreground mb-6">
+                    Clique no botão abaixo para solicitar um link de recuperação
+                    de senha.
+                  </p>
+                  <Button
+                    onClick={() => handleRecoverPassword(e)}
+                    className="w-full"
+                  >
+                    Enviar Link de Recuperação
+                  </Button>
+                </div>
               </TabsContent>
 
               <TabsContent value="signup">
@@ -172,17 +236,12 @@ function AuthPage() {
                     Criar conta
                   </Button>
                   <p className="text-xs text-muted-foreground">
-                    O primeiro usuário registrado se torna administrador geral automaticamente.
+                    O primeiro usuário registrado se torna administrador geral
+                    automaticamente.
                   </p>
                 </form>
               </TabsContent>
             </Tabs>
-
-            <div className="mt-6 border-t border-border pt-4 text-center text-sm">
-              <Link to="/auth/student" className="text-primary hover:underline">
-                Sou aluno — entrar com código da turma
-              </Link>
-            </div>
           </CardContent>
         </Card>
       </div>

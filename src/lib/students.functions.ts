@@ -11,7 +11,7 @@ import { SignInSchema, CreateStudentSchema } from "./students.schemas.server";
 // ============================================================
 
 export const studentSignInFn = createServerFn({ method: "POST" })
-  .inputValidator((raw: unknown) => SignInSchema.parse(raw))
+  .validator((raw: unknown) => SignInSchema.parse(raw))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -73,7 +73,7 @@ export const studentSignInFn = createServerFn({ method: "POST" })
 
 export const createStudentFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((raw: unknown) => CreateStudentSchema.parse(raw))
+  .validator((raw: unknown) => CreateStudentSchema.parse(raw))
   .handler(async ({ data, context }) => {
     const { assertCanManageStudent } = await import("./manage.server");
     await assertCanManageStudent(context.supabase, context.userId, data.schoolId, [data.classId]);

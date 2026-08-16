@@ -15,10 +15,10 @@ import {
 import { lazy, Suspense } from "react";
 import { motion } from "framer-motion";
 
-const heroReading = "/src/assets/hero-reading.webp";
-const featureBook = "/src/assets/feature-book.webp";
-const featureTeacher = "/src/assets/feature-teacher.webp";
-const featureBooks = "/src/assets/feature-books.webp";
+const heroReading = "/assets/hero-reading.webp";
+const featureBook = "/assets/feature-book.webp";
+const featureTeacher = "/assets/feature-teacher.webp";
+const featureBooks = "/assets/feature-books.webp";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -80,11 +80,7 @@ function Landing() {
           />
 
           <div className="relative mx-auto grid max-w-6xl gap-10 px-4 pt-14 pb-16 sm:px-6 sm:pt-20 sm:pb-24 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:pt-28">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
+            <div>
               <span className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/70 px-3 py-1 text-xs font-medium text-muted-foreground shadow-soft backdrop-blur">
                 <Sparkles className="size-3 text-primary" /> Alinhado à matriz PIRLS 2021
               </span>
@@ -118,7 +114,7 @@ function Landing() {
                   </li>
                 ))}
               </ul>
-            </motion.div>
+            </div>
 
             {/* Hero visual */}
             <div className="relative animate-fade-up" style={{ animationDelay: "150ms" }}>
