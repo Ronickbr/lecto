@@ -29,5 +29,6 @@ export function createAiProvider(apiKey?: string) {
     name: "lecto-ai",
     baseURL: getAiBaseUrl(),
     headers: key ? { Authorization: `Bearer ${key}` } : {},
+    supportsStructuredOutputs: true,
   });
 }
