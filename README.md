@@ -78,22 +78,17 @@ bun dev
 npm run dev
 ```
 
-A aplicação estará disponível em `http://localhost:3000`.
+A aplicação estará disponível em `http://localhost:8080`.
 
 ---
 
 ## ☁️ Automação & VPS (Self-Hosted Supabase)
 
-O projeto conta com scripts utilitários em Node.js para validação e povoamento rápido do banco de dados na VPS:
+O projeto conta com um script utilitário em Node.js para povoar usuários iniciais e permissões no Supabase local:
 
-- **Testar Conexão VPS**:
-  ```bash
-  node scripts/test-vps.js
-  ```
-- **Povoar Usuários Iniciais & Permissões**:
-  ```bash
-  node scripts/seed-local-users.js
-  ```
+```bash
+bun run scripts/seed-local-users.js
+```
 
 ---
 

@@ -43,19 +43,18 @@ function AuthPage() {
   };
 
   // Iniciar fluxo de recuperação
-  const handleRecoverPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRecoverPassword = async () => {
     if (!email) return toast.error("Informe seu email");
     setLoading(true);
     try {
-      const { error } = await supabase.auth.requestMagicLink(email);
+      const { error } = await supabase.auth.signInWithOtp({ email });
       if (error) throw error;
       toast.success("Código enviado! Verifique seu email.");
       setEmail("");
       // Navigamos para a página de recuperação
       navigate({ to: "/auth/recovery" });
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err instanceof Error ? err.message : "Erro ao enviar código de recuperação");
     } finally {
       setLoading(false);
     }
@@ -79,8 +78,7 @@ function AuthPage() {
   // Sign up
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
-    if (!email || !password || !fullName)
-      return toast.error("Preencha todos os campos");
+    if (!email || !password || !fullName) return toast.error("Preencha todos os campos");
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email,
@@ -133,9 +131,7 @@ function AuthPage() {
 
         <Card className="shadow-elevated">
           <CardHeader>
-            <CardTitle className="font-display text-xl sm:text-2xl">
-              Acesso institucional
-            </CardTitle>
+            <CardTitle className="font-display text-xl sm:text-2xl">Acesso institucional</CardTitle>
             <CardDescription>Administradores, escolas e professores.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -172,10 +168,7 @@ function AuthPage() {
                     Entrar
                   </Button>
                   <div className="mt-4 text-center">
-                    <Link
-                      to="/auth/recovery"
-                      className="text-sm text-primary hover:underline"
-                    >
+                    <Link to="/auth/recovery" className="text-sm text-primary hover:underline">
                       Esqueci minha senha
                     </Link>
                   </div>
@@ -184,17 +177,11 @@ function AuthPage() {
 
               <TabsContent value="recovery">
                 <div className="py-8">
-                  <h3 className="mb-4 text-center text-lg font-medium">
-                    Recuperar Senha
-                  </h3>
+                  <h3 className="mb-4 text-center text-lg font-medium">Recuperar Senha</h3>
                   <p className="text-center text-muted-foreground mb-6">
-                    Clique no botão abaixo para solicitar um link de recuperação
-                    de senha.
+                    Clique no botão abaixo para solicitar um link de recuperação de senha.
                   </p>
-                  <Button
-                    onClick={() => handleRecoverPassword(e)}
-                    className="w-full"
-                  >
+                  <Button onClick={() => handleRecoverPassword()} className="w-full">
                     Enviar Link de Recuperação
                   </Button>
                 </div>
@@ -236,8 +223,7 @@ function AuthPage() {
                     Criar conta
                   </Button>
                   <p className="text-xs text-muted-foreground">
-                    O primeiro usuário registrado se torna administrador geral
-                    automaticamente.
+                    O primeiro usuário registrado se torna administrador geral automaticamente.
                   </p>
                 </form>
               </TabsContent>

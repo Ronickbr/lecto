@@ -93,4 +93,3 @@ export async function resolveSchoolIdForGeneration(
 
   throw new Error("Escola não associada para geração de conteúdo");
 }
-

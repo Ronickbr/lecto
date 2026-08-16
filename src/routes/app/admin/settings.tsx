@@ -10,7 +10,13 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PageHeader } from "@/components/admin/stat-card";
@@ -157,11 +163,46 @@ const DEFAULT_SETTINGS: SystemSettingsState = {
 
 // Logs estáticos para demonstração de auditoria
 const MOCK_AUDIT_LOGS = [
-  { id: "1", timestamp: "2026-08-15 18:25:10", user: "Super Admin (Você)", action: "ALTERAR_CONFIGURAÇAO", module: "Segurança", details: "Atualizou política de sessão para 60 min" },
-  { id: "2", timestamp: "2026-08-15 17:10:04", user: "Super Admin (Você)", action: "ATIVAR_PLANO", module: "Planos", details: "Ativou o plano 'Pro'" },
-  { id: "3", timestamp: "2026-08-15 15:40:22", user: "Sistema", action: "BACKUP_AUTOMATICO", module: "Backup", details: "Snapshot completo gerado (42 MB)" },
-  { id: "4", timestamp: "2026-08-15 12:00:00", user: "Super Admin (Você)", action: "TESTE_INTEGRAÇÃO", module: "Integrações", details: "Testou conexão OpenAI (200 OK)" },
-  { id: "5", timestamp: "2026-08-14 22:15:33", user: "Super Admin (Você)", action: "LOGIN_SUPERADMIN", module: "Autenticação", details: "Login efetuado via IP 189.120.44.12" },
+  {
+    id: "1",
+    timestamp: "2026-08-15 18:25:10",
+    user: "Super Admin (Você)",
+    action: "ALTERAR_CONFIGURAÇAO",
+    module: "Segurança",
+    details: "Atualizou política de sessão para 60 min",
+  },
+  {
+    id: "2",
+    timestamp: "2026-08-15 17:10:04",
+    user: "Super Admin (Você)",
+    action: "ATIVAR_PLANO",
+    module: "Planos",
+    details: "Ativou o plano 'Pro'",
+  },
+  {
+    id: "3",
+    timestamp: "2026-08-15 15:40:22",
+    user: "Sistema",
+    action: "BACKUP_AUTOMATICO",
+    module: "Backup",
+    details: "Snapshot completo gerado (42 MB)",
+  },
+  {
+    id: "4",
+    timestamp: "2026-08-15 12:00:00",
+    user: "Super Admin (Você)",
+    action: "TESTE_INTEGRAÇÃO",
+    module: "Integrações",
+    details: "Testou conexão OpenAI (200 OK)",
+  },
+  {
+    id: "5",
+    timestamp: "2026-08-14 22:15:33",
+    user: "Super Admin (Você)",
+    action: "LOGIN_SUPERADMIN",
+    module: "Autenticação",
+    details: "Login efetuado via IP 189.120.44.12",
+  },
 ];
 
 function SuperAdminSettingsPage() {
@@ -180,11 +221,11 @@ function SuperAdminSettingsPage() {
     queryFn: async () => {
       const { data, error } = await supabase.from("platform_settings").select("*");
       if (error) throw error;
-      const parsed: Record<string, any> = {};
+      const parsed: Record<string, unknown> = {};
       data?.forEach((item) => {
-        let val: any = item.value;
+        let val: unknown = item.value;
         if (val && typeof val === "object" && !Array.isArray(val) && "val" in val) {
-          val = (val as Record<string, any>).val;
+          val = (val as Record<string, unknown>).val;
         }
         parsed[item.key] = val;
       });
@@ -222,7 +263,10 @@ function SuperAdminSettingsPage() {
       for (const entry of entries) {
         const { error } = await supabase
           .from("platform_settings")
-          .upsert({ key: entry.key, value: entry.value, updated_at: entry.updated_at }, { onConflict: "key" });
+          .upsert(
+            { key: entry.key, value: entry.value, updated_at: entry.updated_at },
+            { onConflict: "key" },
+          );
         if (error) throw error;
       }
     },
@@ -376,7 +420,10 @@ function SuperAdminSettingsPage() {
           <TabsTrigger value="permissions" className="rounded-xl py-2 gap-1.5 text-xs font-medium">
             <UserCheck className="size-3.5" /> Permissões
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="rounded-xl py-2 gap-1.5 text-xs font-medium">
+          <TabsTrigger
+            value="notifications"
+            className="rounded-xl py-2 gap-1.5 text-xs font-medium"
+          >
             <Bell className="size-3.5" /> Notificações
           </TabsTrigger>
           <TabsTrigger value="backup" className="rounded-xl py-2 gap-1.5 text-xs font-medium">
@@ -398,7 +445,8 @@ function SuperAdminSettingsPage() {
                 <Globe className="size-5 text-primary" /> Configurações Gerais do Sistema
               </CardTitle>
               <CardDescription>
-                Informações institucionais, internacionalização e parâmetros de operação da plataforma Lecto.
+                Informações institucionais, internacionalização e parâmetros de operação da
+                plataforma Lecto.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -454,7 +502,9 @@ function SuperAdminSettingsPage() {
                       <SelectValue placeholder="Selecione o fuso horário" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="America/Sao_Paulo">América/São Paulo (UTC-03:00)</SelectItem>
+                      <SelectItem value="America/Sao_Paulo">
+                        América/São Paulo (UTC-03:00)
+                      </SelectItem>
                       <SelectItem value="America/Manaus">América/Manaus (UTC-04:00)</SelectItem>
                       <SelectItem value="UTC">UTC (Tempo Universal Coordenado)</SelectItem>
                     </SelectContent>
@@ -487,7 +537,8 @@ function SuperAdminSettingsPage() {
                     <AlertTriangle className="size-4" /> Modo Manutenção da Plataforma
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Quando ativado, bloqueia acessos de professores e alunos exibindo tela de manutenção.
+                    Quando ativado, bloqueia acessos de professores e alunos exibindo tela de
+                    manutenção.
                   </p>
                 </div>
                 <Switch
@@ -517,14 +568,17 @@ function SuperAdminSettingsPage() {
                 <Shield className="size-5 text-emerald-500" /> Políticas de Segurança e Autenticação
               </CardTitle>
               <CardDescription>
-                Regras de senhas, autenticação em dois fatores, controle de sessões e restrição de IPs.
+                Regras de senhas, autenticação em dois fatores, controle de sessões e restrição de
+                IPs.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between rounded-xl border border-border p-4">
                   <div>
-                    <div className="font-semibold text-sm">Autenticação de Dois Fatores (2FA) Obrigatória</div>
+                    <div className="font-semibold text-sm">
+                      Autenticação de Dois Fatores (2FA) Obrigatória
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       Exige 2FA para todos os administradores e professores cadastrados no sistema.
                     </p>
@@ -543,7 +597,9 @@ function SuperAdminSettingsPage() {
                       min={6}
                       max={32}
                       value={settings.minPasswordLength}
-                      onChange={(e) => setSettings({ ...settings, minPasswordLength: Number(e.target.value) })}
+                      onChange={(e) =>
+                        setSettings({ ...settings, minPasswordLength: Number(e.target.value) })
+                      }
                       className="rounded-xl"
                     />
                   </div>
@@ -554,7 +610,9 @@ function SuperAdminSettingsPage() {
                       type="number"
                       min={0}
                       value={settings.passwordExpirationDays}
-                      onChange={(e) => setSettings({ ...settings, passwordExpirationDays: Number(e.target.value) })}
+                      onChange={(e) =>
+                        setSettings({ ...settings, passwordExpirationDays: Number(e.target.value) })
+                      }
                       className="rounded-xl"
                     />
                   </div>
@@ -565,7 +623,9 @@ function SuperAdminSettingsPage() {
                       type="number"
                       min={5}
                       value={settings.sessionTimeoutMinutes}
-                      onChange={(e) => setSettings({ ...settings, sessionTimeoutMinutes: Number(e.target.value) })}
+                      onChange={(e) =>
+                        setSettings({ ...settings, sessionTimeoutMinutes: Number(e.target.value) })
+                      }
                       className="rounded-xl"
                     />
                   </div>
@@ -576,7 +636,9 @@ function SuperAdminSettingsPage() {
                       type="number"
                       min={3}
                       value={settings.maxFailedLogins}
-                      onChange={(e) => setSettings({ ...settings, maxFailedLogins: Number(e.target.value) })}
+                      onChange={(e) =>
+                        setSettings({ ...settings, maxFailedLogins: Number(e.target.value) })
+                      }
                       className="rounded-xl"
                     />
                   </div>
@@ -587,14 +649,18 @@ function SuperAdminSettingsPage() {
                     <span className="text-sm">Exigir caracteres especiais (!@#$)</span>
                     <Checkbox
                       checked={settings.requireSpecialChar}
-                      onCheckedChange={(v) => setSettings({ ...settings, requireSpecialChar: Boolean(v) })}
+                      onCheckedChange={(v) =>
+                        setSettings({ ...settings, requireSpecialChar: Boolean(v) })
+                      }
                     />
                   </div>
                   <div className="flex items-center justify-between rounded-xl border border-border p-3">
                     <span className="text-sm">Exigir números (0-9)</span>
                     <Checkbox
                       checked={settings.requireNumbers}
-                      onCheckedChange={(v) => setSettings({ ...settings, requireNumbers: Boolean(v) })}
+                      onCheckedChange={(v) =>
+                        setSettings({ ...settings, requireNumbers: Boolean(v) })
+                      }
                     />
                   </div>
                 </div>
@@ -602,7 +668,9 @@ function SuperAdminSettingsPage() {
                 <Separator />
 
                 <div className="space-y-2">
-                  <Label htmlFor="ipWhitelist">Lista de Acesso por IP (IP Whitelist para Admin)</Label>
+                  <Label htmlFor="ipWhitelist">
+                    Lista de Acesso por IP (IP Whitelist para Admin)
+                  </Label>
                   <Textarea
                     id="ipWhitelist"
                     placeholder="Cole os IPs autorizados separados por vírgula ou linha (ex: 200.180.12.1, 189.44.12.0/24)"
@@ -625,10 +693,12 @@ function SuperAdminSettingsPage() {
           <Card className="rounded-2xl border-border/70 shadow-soft">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <UserCheck className="size-5 text-indigo-500" /> Matriz de Permissões por Função (RBAC)
+                <UserCheck className="size-5 text-indigo-500" /> Matriz de Permissões por Função
+                (RBAC)
               </CardTitle>
               <CardDescription>
-                Controle granular dos privilégios do sistema para Super Admin, Gestor Escolar, Professor e Aluno.
+                Controle granular dos privilégios do sistema para Super Admin, Gestor Escolar,
+                Professor e Aluno.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -645,14 +715,62 @@ function SuperAdminSettingsPage() {
                   </TableHeader>
                   <TableBody>
                     {[
-                      { module: "Gerenciamento de Escolas & Assinaturas", sa: true, sc: false, te: false, st: false },
-                      { module: "Criar & Publicar Simulados", sa: true, sc: true, te: true, st: false },
-                      { module: "Realizar Simulados & Enviar Respostas", sa: false, sc: false, te: false, st: true },
-                      { module: "Visualizar Gabarito & Rubrica de Correção", sa: true, sc: true, te: true, st: false },
-                      { module: "Correção de Questões Dissertativas via IA", sa: true, sc: true, te: true, st: false },
-                      { module: "Gerenciar Turmas e Professores", sa: true, sc: true, te: false, st: false },
-                      { module: "Configurações Globais da Plataforma", sa: true, sc: false, te: false, st: false },
-                      { module: "Logs de Auditoria & Segurança RLS", sa: true, sc: true, te: false, st: false },
+                      {
+                        module: "Gerenciamento de Escolas & Assinaturas",
+                        sa: true,
+                        sc: false,
+                        te: false,
+                        st: false,
+                      },
+                      {
+                        module: "Criar & Publicar Simulados",
+                        sa: true,
+                        sc: true,
+                        te: true,
+                        st: false,
+                      },
+                      {
+                        module: "Realizar Simulados & Enviar Respostas",
+                        sa: false,
+                        sc: false,
+                        te: false,
+                        st: true,
+                      },
+                      {
+                        module: "Visualizar Gabarito & Rubrica de Correção",
+                        sa: true,
+                        sc: true,
+                        te: true,
+                        st: false,
+                      },
+                      {
+                        module: "Correção de Questões Dissertativas via IA",
+                        sa: true,
+                        sc: true,
+                        te: true,
+                        st: false,
+                      },
+                      {
+                        module: "Gerenciar Turmas e Professores",
+                        sa: true,
+                        sc: true,
+                        te: false,
+                        st: false,
+                      },
+                      {
+                        module: "Configurações Globais da Plataforma",
+                        sa: true,
+                        sc: false,
+                        te: false,
+                        st: false,
+                      },
+                      {
+                        module: "Logs de Auditoria & Segurança RLS",
+                        sa: true,
+                        sc: true,
+                        te: false,
+                        st: false,
+                      },
                     ].map((row) => (
                       <TableRow key={row.module}>
                         <TableCell className="font-medium text-sm">{row.module}</TableCell>
@@ -660,13 +778,25 @@ function SuperAdminSettingsPage() {
                           <Check className="mx-auto size-4 text-emerald-500" />
                         </TableCell>
                         <TableCell className="text-center">
-                          {row.sc ? <Check className="mx-auto size-4 text-emerald-500" /> : <span className="text-muted-foreground text-xs">—</span>}
+                          {row.sc ? (
+                            <Check className="mx-auto size-4 text-emerald-500" />
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-center">
-                          {row.te ? <Check className="mx-auto size-4 text-emerald-500" /> : <span className="text-muted-foreground text-xs">—</span>}
+                          {row.te ? (
+                            <Check className="mx-auto size-4 text-emerald-500" />
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-center">
-                          {row.st ? <Check className="mx-auto size-4 text-emerald-500" /> : <span className="text-muted-foreground text-xs">—</span>}
+                          {row.st ? (
+                            <Check className="mx-auto size-4 text-emerald-500" />
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -677,7 +807,8 @@ function SuperAdminSettingsPage() {
               {/* Tabela de Planos integrada */}
               <div className="mt-8 space-y-3">
                 <h4 className="font-semibold text-sm flex items-center gap-2">
-                  <Layers className="size-4 text-primary" /> Status dos Planos de Assinatura no Banco
+                  <Layers className="size-4 text-primary" /> Status dos Planos de Assinatura no
+                  Banco
                 </h4>
                 <div className="rounded-xl border overflow-hidden">
                   <Table>
@@ -694,13 +825,20 @@ function SuperAdminSettingsPage() {
                       {(plans ?? []).map((p) => (
                         <TableRow key={p.id}>
                           <TableCell className="font-medium">{p.name}</TableCell>
-                          <TableCell><Badge variant="outline">{TIER_LABEL[p.tier]}</Badge></TableCell>
-                          <TableCell className="text-right tabular-nums">{brl(p.price_cents)}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{TIER_LABEL[p.tier]}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {brl(p.price_cents)}
+                          </TableCell>
                           <TableCell className="text-right text-xs text-muted-foreground">
                             {p.max_teachers} profs · {p.max_students} alunos
                           </TableCell>
                           <TableCell className="text-right">
-                            <Switch checked={p.active} onCheckedChange={(v) => togglePlan(p.id, v)} />
+                            <Switch
+                              checked={p.active}
+                              onCheckedChange={(v) => togglePlan(p.id, v)}
+                            />
                           </TableCell>
                         </TableRow>
                       ))}
@@ -726,13 +864,36 @@ function SuperAdminSettingsPage() {
             <CardContent className="space-y-6">
               <div className="space-y-3">
                 {[
-                  { key: "notifyNewSchool" as const, title: "Nova Escola Cadastrada", desc: "Receber aviso quando uma nova escola iniciar o cadastro ou trial." },
-                  { key: "notifyChurn" as const, title: "Cancelamento / Inatividade (Churn)", desc: "Notificar quando uma assinatura for cancelada ou expirar." },
-                  { key: "notifySuspiciousLogin" as const, title: "Tentativas de Login Suspeitas", desc: "Alertar quando houver múltiplos logins com falha ou de IPs desconhecidos." },
-                  { key: "notifyCriticalErrors" as const, title: "Erros Críticos da Aplicação", desc: "Notificar falhas de conexões de IA ou erros no Supabase." },
-                  { key: "weeklyDigest" as const, title: "Resumo Semanal de Métricas", desc: "Receber relatório consolidado de simulados realizados e cadastros." },
+                  {
+                    key: "notifyNewSchool" as const,
+                    title: "Nova Escola Cadastrada",
+                    desc: "Receber aviso quando uma nova escola iniciar o cadastro ou trial.",
+                  },
+                  {
+                    key: "notifyChurn" as const,
+                    title: "Cancelamento / Inatividade (Churn)",
+                    desc: "Notificar quando uma assinatura for cancelada ou expirar.",
+                  },
+                  {
+                    key: "notifySuspiciousLogin" as const,
+                    title: "Tentativas de Login Suspeitas",
+                    desc: "Alertar quando houver múltiplos logins com falha ou de IPs desconhecidos.",
+                  },
+                  {
+                    key: "notifyCriticalErrors" as const,
+                    title: "Erros Críticos da Aplicação",
+                    desc: "Notificar falhas de conexões de IA ou erros no Supabase.",
+                  },
+                  {
+                    key: "weeklyDigest" as const,
+                    title: "Resumo Semanal de Métricas",
+                    desc: "Receber relatório consolidado de simulados realizados e cadastros.",
+                  },
                 ].map((item) => (
-                  <div key={item.key} className="flex items-center justify-between rounded-xl border border-border p-3.5">
+                  <div
+                    key={item.key}
+                    className="flex items-center justify-between rounded-xl border border-border p-3.5"
+                  >
                     <div>
                       <div className="text-sm font-semibold">{item.title}</div>
                       <div className="text-xs text-muted-foreground">{item.desc}</div>
@@ -752,7 +913,12 @@ function SuperAdminSettingsPage() {
                   <Label>Canal Principal de Entrega</Label>
                   <Select
                     value={settings.notificationChannel}
-                    onValueChange={(val: any) => setSettings({ ...settings, notificationChannel: val })}
+                    onValueChange={(val) =>
+                      setSettings({
+                        ...settings,
+                        notificationChannel: val as "email" | "in_app" | "both",
+                      })
+                    }
                   >
                     <SelectTrigger className="rounded-xl">
                       <SelectValue placeholder="Selecione o canal" />
@@ -769,7 +935,12 @@ function SuperAdminSettingsPage() {
                   <Label>Frequência dos Resumos de Desempenho</Label>
                   <Select
                     value={settings.digestFrequency}
-                    onValueChange={(val: any) => setSettings({ ...settings, digestFrequency: val })}
+                    onValueChange={(val) =>
+                      setSettings({
+                        ...settings,
+                        digestFrequency: val as "daily" | "weekly" | "monthly",
+                      })
+                    }
                   >
                     <SelectTrigger className="rounded-xl">
                       <SelectValue placeholder="Selecione a frequência" />
@@ -791,10 +962,12 @@ function SuperAdminSettingsPage() {
           <Card className="rounded-2xl border-border/70 shadow-soft">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <HardDrive className="size-5 text-blue-500" /> Copias de Segurança (Backup) & Retenção
+                <HardDrive className="size-5 text-blue-500" /> Copias de Segurança (Backup) &
+                Retenção
               </CardTitle>
               <CardDescription>
-                Agendamento de rotinas de backup da base Postgres do Supabase e relatórios de restauração.
+                Agendamento de rotinas de backup da base Postgres do Supabase e relatórios de
+                restauração.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -816,7 +989,12 @@ function SuperAdminSettingsPage() {
                   <Label>Frequência do Backup</Label>
                   <Select
                     value={settings.backupFrequency}
-                    onValueChange={(val: any) => setSettings({ ...settings, backupFrequency: val })}
+                    onValueChange={(val) =>
+                      setSettings({
+                        ...settings,
+                        backupFrequency: val as "daily" | "weekly" | "monthly",
+                      })
+                    }
                   >
                     <SelectTrigger className="rounded-xl">
                       <SelectValue />
@@ -836,7 +1014,9 @@ function SuperAdminSettingsPage() {
                     min={7}
                     max={365}
                     value={settings.backupRetentionDays}
-                    onChange={(e) => setSettings({ ...settings, backupRetentionDays: Number(e.target.value) })}
+                    onChange={(e) =>
+                      setSettings({ ...settings, backupRetentionDays: Number(e.target.value) })
+                    }
                     className="rounded-xl"
                   />
                 </div>
@@ -845,7 +1025,12 @@ function SuperAdminSettingsPage() {
                   <Label>Provedor de Armazenamento</Label>
                   <Select
                     value={settings.storageProvider}
-                    onValueChange={(val: any) => setSettings({ ...settings, storageProvider: val })}
+                    onValueChange={(val) =>
+                      setSettings({
+                        ...settings,
+                        storageProvider: val as "supabase" | "aws_s3" | "gcp",
+                      })
+                    }
                   >
                     <SelectTrigger className="rounded-xl">
                       <SelectValue />
@@ -892,7 +1077,8 @@ function SuperAdminSettingsPage() {
               <div className="space-y-2 rounded-xl border border-border p-4">
                 <div className="flex items-center justify-between">
                   <div className="font-semibold text-sm flex items-center gap-2">
-                    <Cpu className="size-4 text-orange-500" /> OpenRouter API Key (Modelos LLM Universais / Claude, Llama, DeepSeek)
+                    <Cpu className="size-4 text-orange-500" /> OpenRouter API Key (Modelos LLM
+                    Universais / Claude, Llama, DeepSeek)
                   </div>
                   <Button
                     variant="ghost"
@@ -915,7 +1101,11 @@ function SuperAdminSettingsPage() {
                     onClick={() => toggleShowKey("openrouter")}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
-                    {showSecretKeys["openrouter"] ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    {showSecretKeys["openrouter"] ? (
+                      <EyeOff className="size-4" />
+                    ) : (
+                      <Eye className="size-4" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -924,7 +1114,8 @@ function SuperAdminSettingsPage() {
               <div className="space-y-2 rounded-xl border border-border p-4">
                 <div className="flex items-center justify-between">
                   <div className="font-semibold text-sm flex items-center gap-2">
-                    <SparklesIcon className="size-4 text-purple-500" /> OpenAI API Key (Geração de Simulados e Correção IA)
+                    <SparklesIcon className="size-4 text-purple-500" /> OpenAI API Key (Geração de
+                    Simulados e Correção IA)
                   </div>
                   <Button
                     variant="ghost"
@@ -947,7 +1138,11 @@ function SuperAdminSettingsPage() {
                     onClick={() => toggleShowKey("openai")}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
-                    {showSecretKeys["openai"] ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    {showSecretKeys["openai"] ? (
+                      <EyeOff className="size-4" />
+                    ) : (
+                      <Eye className="size-4" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -956,7 +1151,8 @@ function SuperAdminSettingsPage() {
               <div className="space-y-2 rounded-xl border border-border p-4">
                 <div className="flex items-center justify-between">
                   <div className="font-semibold text-sm flex items-center gap-2">
-                    <Key className="size-4 text-sky-500" /> Mercado Pago Access Token (Gateway de Pagamento)
+                    <Key className="size-4 text-sky-500" /> Mercado Pago Access Token (Gateway de
+                    Pagamento)
                   </div>
                   <Button
                     variant="ghost"
@@ -971,7 +1167,9 @@ function SuperAdminSettingsPage() {
                   <Input
                     type={showSecretKeys["mercadopago"] ? "text" : "password"}
                     value={settings.mercadoPagoAccessToken}
-                    onChange={(e) => setSettings({ ...settings, mercadoPagoAccessToken: e.target.value })}
+                    onChange={(e) =>
+                      setSettings({ ...settings, mercadoPagoAccessToken: e.target.value })
+                    }
                     className="pr-10 font-mono text-xs rounded-xl"
                   />
                   <button
@@ -979,7 +1177,11 @@ function SuperAdminSettingsPage() {
                     onClick={() => toggleShowKey("mercadopago")}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
-                    {showSecretKeys["mercadopago"] ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    {showSecretKeys["mercadopago"] ? (
+                      <EyeOff className="size-4" />
+                    ) : (
+                      <Eye className="size-4" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -999,10 +1201,12 @@ function SuperAdminSettingsPage() {
                     <Activity className="size-3.5" /> Testar Conexão
                   </Button>
                 </div>
-                
+
                 <div className="space-y-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">InfiniteTag (Handle / @ da conta sem o $)</label>
+                    <label className="text-xs font-medium text-muted-foreground">
+                      InfiniteTag (Handle / @ da conta sem o $)
+                    </label>
                     <Input
                       type="text"
                       value={settings.infinityPayTag}
@@ -1013,11 +1217,15 @@ function SuperAdminSettingsPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">Redirect URL (URL de Sucesso)</label>
+                    <label className="text-xs font-medium text-muted-foreground">
+                      Redirect URL (URL de Sucesso)
+                    </label>
                     <Input
                       type="text"
                       value={settings.infinityPayRedirectUrl}
-                      onChange={(e) => setSettings({ ...settings, infinityPayRedirectUrl: e.target.value })}
+                      onChange={(e) =>
+                        setSettings({ ...settings, infinityPayRedirectUrl: e.target.value })
+                      }
                       className="font-mono text-xs rounded-xl"
                       placeholder="https://seusite.com/sucesso"
                     />
@@ -1028,14 +1236,18 @@ function SuperAdminSettingsPage() {
                     <Input
                       type="text"
                       value={settings.infinityPayWebhookUrl}
-                      onChange={(e) => setSettings({ ...settings, infinityPayWebhookUrl: e.target.value })}
+                      onChange={(e) =>
+                        setSettings({ ...settings, infinityPayWebhookUrl: e.target.value })
+                      }
                       className="font-mono text-xs rounded-xl"
                       placeholder="https://seusite.com/api/webhook/infinitypay"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">InfiniteTag (Handle / @ da conta sem o $)</label>
+                    <label className="text-xs font-medium text-muted-foreground">
+                      InfiniteTag (Handle / @ da conta sem o $)
+                    </label>
                     <Input
                       type="text"
                       value={settings.infinityPayTag}
@@ -1051,7 +1263,8 @@ function SuperAdminSettingsPage() {
               <div className="space-y-2 rounded-xl border border-border p-4">
                 <div className="flex items-center justify-between">
                   <div className="font-semibold text-sm flex items-center gap-2">
-                    <Bell className="size-4 text-blue-500" /> Resend API Key (Disparo de E-mails Transacionais)
+                    <Bell className="size-4 text-blue-500" /> Resend API Key (Disparo de E-mails
+                    Transacionais)
                   </div>
                   <Button
                     variant="ghost"
@@ -1074,7 +1287,11 @@ function SuperAdminSettingsPage() {
                     onClick={() => toggleShowKey("resend")}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
-                    {showSecretKeys["resend"] ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    {showSecretKeys["resend"] ? (
+                      <EyeOff className="size-4" />
+                    ) : (
+                      <Eye className="size-4" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -1119,14 +1336,18 @@ function SuperAdminSettingsPage() {
                   <TableBody>
                     {MOCK_AUDIT_LOGS.map((log) => (
                       <TableRow key={log.id}>
-                        <TableCell className="text-xs font-mono text-muted-foreground">{log.timestamp}</TableCell>
+                        <TableCell className="text-xs font-mono text-muted-foreground">
+                          {log.timestamp}
+                        </TableCell>
                         <TableCell className="text-xs font-medium">{log.user}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-[10px]">
                             {log.action}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{log.module}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {log.module}
+                        </TableCell>
                         <TableCell className="text-xs">{log.details}</TableCell>
                       </TableRow>
                     ))}
@@ -1135,7 +1356,12 @@ function SuperAdminSettingsPage() {
               </div>
 
               <div className="flex justify-end pt-2">
-                <Button variant="outline" size="sm" className="gap-1.5 rounded-xl text-xs" onClick={() => toast.info("Relatório de logs exportado em CSV!")}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 rounded-xl text-xs"
+                  onClick={() => toast.info("Relatório de logs exportado em CSV!")}
+                >
                   <Download className="size-3.5" /> Exportar Logs (CSV)
                 </Button>
               </div>
@@ -1149,10 +1375,12 @@ function SuperAdminSettingsPage() {
         <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="size-5 text-amber-500" /> Confirmar alteração de configurações críticas?
+              <AlertTriangle className="size-5 text-amber-500" /> Confirmar alteração de
+              configurações críticas?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Você está alterando parâmetros de segurança da plataforma. Esta ação afetará todos os usuários da aplicação.
+              Você está alterando parâmetros de segurança da plataforma. Esta ação afetará todos os
+              usuários da aplicação.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1173,7 +1401,7 @@ function SuperAdminSettingsPage() {
   );
 }
 
-function ShieldCheckIcon(props: any) {
+function ShieldCheckIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}
@@ -1193,7 +1421,7 @@ function ShieldCheckIcon(props: any) {
   );
 }
 
-function SparklesIcon(props: any) {
+function SparklesIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

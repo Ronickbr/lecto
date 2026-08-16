@@ -8,7 +8,7 @@ import { CreateSchoolSchema, CreateTeacherSchema } from "./staff.schemas.server"
 
 export const createSchoolFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((raw: unknown) => CreateSchoolSchema.parse(raw))
+  .validator((raw: unknown) => CreateSchoolSchema.parse(raw))
   .handler(async ({ data, context }) => {
     const { data: isSuper } = await context.supabase.rpc("is_super_admin", {
       _user_id: context.userId,
@@ -70,7 +70,7 @@ export const createSchoolFn = createServerFn({ method: "POST" })
 
 export const createTeacherFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((raw: unknown) => CreateTeacherSchema.parse(raw))
+  .validator((raw: unknown) => CreateTeacherSchema.parse(raw))
   .handler(async ({ data, context }) => {
     const { data: isSuper } = await context.supabase.rpc("is_super_admin", {
       _user_id: context.userId,

@@ -1,16 +1,16 @@
-import { Link } from 'tanstack/react-router';
-import { Button } from '@shadcn/ui';
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
 
 const SuccessPage = () => {
   return (
     <div className="max-w-4xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
       <h1 className="text-2xl font-bold text-center text-gray-700 mb-4">Sucesso no checkout!</h1>
-      <p className="text-gray-600 mb-6">Sua compra foi realizada com sucesso. Aproveite seu produto!</p>
+      <p className="text-gray-600 mb-6">
+        Sua compra foi realizada com sucesso. Aproveite seu produto!
+      </p>
       <div className="flex justify-center mb-6">
-        <Button color="blue" size="lg" variant="solid">
-          <Link to="/">
-            Voltar à loja
-          </Link>
+        <Button size="lg">
+          <Link to="/">Voltar à loja</Link>
         </Button>
       </div>
       <div className="flex justify-center mt-4">
@@ -25,4 +25,6 @@ const SuccessPage = () => {
   );
 };
 
-export default SuccessPage;
+export const Route = createFileRoute("/checkout/sucesso")({
+  component: SuccessPage,
+});

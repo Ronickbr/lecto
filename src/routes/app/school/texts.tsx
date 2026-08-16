@@ -49,7 +49,8 @@ import {
   ImagePlus,
 } from "lucide-react";
 import { toast } from "sonner";
-import { RichTextBody, TEXT_IMAGES_BUCKET } from "@/components/rich-text";
+import { RichTextBody } from "@/components/rich-text";
+import { TEXT_IMAGES_BUCKET } from "@/components/rich-text-utils";
 
 export const Route = createFileRoute("/app/school/texts")({
   head: () => ({ meta: [{ title: "Banco de textos | Lecto" }] }),

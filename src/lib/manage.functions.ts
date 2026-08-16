@@ -7,7 +7,7 @@ import { z } from "zod";
 // ============================================================
 export const updateTeacherFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((raw: unknown) =>
+  .validator((raw: unknown) =>
     z
       .object({
         teacherId: z.string().uuid(),
@@ -46,7 +46,7 @@ export const updateTeacherFn = createServerFn({ method: "POST" })
 
 export const resetTeacherPasswordFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((raw: unknown) =>
+  .validator((raw: unknown) =>
     z.object({ teacherId: z.string().uuid(), password: z.string().min(6) }).parse(raw),
   )
   .handler(async ({ data, context }) => {
@@ -70,7 +70,7 @@ export const resetTeacherPasswordFn = createServerFn({ method: "POST" })
 
 export const deleteTeacherFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((raw: unknown) => z.object({ teacherId: z.string().uuid() }).parse(raw))
+  .validator((raw: unknown) => z.object({ teacherId: z.string().uuid() }).parse(raw))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { assertCanManageSchool } = await import("./manage.server");
@@ -112,7 +112,7 @@ export const deleteTeacherFn = createServerFn({ method: "POST" })
 // ============================================================
 export const updateStudentFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((raw: unknown) =>
+  .validator((raw: unknown) =>
     z
       .object({
         studentId: z.string().uuid(),
@@ -171,7 +171,7 @@ export const updateStudentFn = createServerFn({ method: "POST" })
 
 export const resetStudentPinFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((raw: unknown) =>
+  .validator((raw: unknown) =>
     z.object({ studentId: z.string().uuid(), pin: z.string().min(4).max(10) }).parse(raw),
   )
   .handler(async ({ data, context }) => {
@@ -203,7 +203,7 @@ export const resetStudentPinFn = createServerFn({ method: "POST" })
 
 export const deleteStudentFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((raw: unknown) => z.object({ studentId: z.string().uuid() }).parse(raw))
+  .validator((raw: unknown) => z.object({ studentId: z.string().uuid() }).parse(raw))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -246,7 +246,7 @@ export const deleteStudentFn = createServerFn({ method: "POST" })
 // ============================================================
 export const bulkImportStudentsFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((raw: unknown) =>
+  .validator((raw: unknown) =>
     z
       .object({
         schoolId: z.string().uuid(),

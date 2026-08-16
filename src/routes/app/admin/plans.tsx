@@ -118,7 +118,8 @@ function PlansPage() {
                     <strong className="text-foreground">{p.max_students}</strong> alunos
                   </div>
                   <div className="col-span-2">
-                    <strong className="text-foreground">{p.max_simulados_month}</strong> simulados/mês
+                    <strong className="text-foreground">{p.max_simulados_month}</strong>{" "}
+                    simulados/mês
                   </div>
                 </div>
 
@@ -248,9 +249,7 @@ function PlansPage() {
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={updateMutation.isPending}>
-                  {updateMutation.isPending && (
-                    <Loader2 className="mr-2 size-4 animate-spin" />
-                  )}
+                  {updateMutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
                   Salvar Alterações
                 </Button>
               </DialogFooter>
@@ -261,4 +260,3 @@ function PlansPage() {
     </div>
   );
 }
-

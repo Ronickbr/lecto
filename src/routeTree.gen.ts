@@ -14,7 +14,10 @@ import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppProfileRouteImport } from './routes/app/profile'
 import { Route as AuthIndexRouteImport } from './routes/auth.index'
+import { Route as AuthNewPasswordRouteImport } from './routes/auth/new-password'
+import { Route as AuthRecoveryRouteImport } from './routes/auth/recovery'
 import { Route as AuthStudentRouteImport } from './routes/auth.student'
+import { Route as CheckoutSucessoRouteImport } from './routes/checkout/sucesso'
 import { Route as AppAdminIndexRouteImport } from './routes/app/admin/index'
 import { Route as AppAdminAuditRouteImport } from './routes/app/admin/audit'
 import { Route as AppAdminFinanceRouteImport } from './routes/app/admin/finance'
@@ -69,9 +72,24 @@ const AuthIndexRoute = AuthIndexRouteImport.update({
   path: '/auth/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthNewPasswordRoute = AuthNewPasswordRouteImport.update({
+  id: '/auth/new-password',
+  path: '/auth/new-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRecoveryRoute = AuthRecoveryRouteImport.update({
+  id: '/auth/recovery',
+  path: '/auth/recovery',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthStudentRoute = AuthStudentRouteImport.update({
   id: '/auth/student',
   path: '/auth/student',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutSucessoRoute = CheckoutSucessoRouteImport.update({
+  id: '/checkout/sucesso',
+  path: '/checkout/sucesso',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppAdminIndexRoute = AppAdminIndexRouteImport.update({
@@ -220,7 +238,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/app/profile': typeof AppProfileRoute
+  '/auth/new-password': typeof AuthNewPasswordRoute
+  '/auth/recovery': typeof AuthRecoveryRoute
   '/auth/student': typeof AuthStudentRoute
+  '/checkout/sucesso': typeof CheckoutSucessoRoute
   '/app/': typeof AppIndexRoute
   '/auth/': typeof AuthIndexRoute
   '/app/admin/audit': typeof AppAdminAuditRoute
@@ -255,7 +276,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app/profile': typeof AppProfileRoute
+  '/auth/new-password': typeof AuthNewPasswordRoute
+  '/auth/recovery': typeof AuthRecoveryRoute
   '/auth/student': typeof AuthStudentRoute
+  '/checkout/sucesso': typeof CheckoutSucessoRoute
   '/app': typeof AppIndexRoute
   '/auth': typeof AuthIndexRoute
   '/app/admin/audit': typeof AppAdminAuditRoute
@@ -292,7 +316,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/app/profile': typeof AppProfileRoute
+  '/auth/new-password': typeof AuthNewPasswordRoute
+  '/auth/recovery': typeof AuthRecoveryRoute
   '/auth/student': typeof AuthStudentRoute
+  '/checkout/sucesso': typeof CheckoutSucessoRoute
   '/app/': typeof AppIndexRoute
   '/auth/': typeof AuthIndexRoute
   '/app/admin/audit': typeof AppAdminAuditRoute
@@ -330,7 +357,10 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/app/profile'
+    | '/auth/new-password'
+    | '/auth/recovery'
     | '/auth/student'
+    | '/checkout/sucesso'
     | '/app/'
     | '/auth/'
     | '/app/admin/audit'
@@ -365,7 +395,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/app/profile'
+    | '/auth/new-password'
+    | '/auth/recovery'
     | '/auth/student'
+    | '/checkout/sucesso'
     | '/app'
     | '/auth'
     | '/app/admin/audit'
@@ -401,7 +434,10 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/app/profile'
+    | '/auth/new-password'
+    | '/auth/recovery'
     | '/auth/student'
+    | '/checkout/sucesso'
     | '/app/'
     | '/auth/'
     | '/app/admin/audit'
@@ -437,7 +473,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
+  AuthNewPasswordRoute: typeof AuthNewPasswordRoute
+  AuthRecoveryRoute: typeof AuthRecoveryRoute
   AuthStudentRoute: typeof AuthStudentRoute
+  CheckoutSucessoRoute: typeof CheckoutSucessoRoute
   AuthIndexRoute: typeof AuthIndexRoute
 }
 
@@ -478,11 +517,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/new-password': {
+      id: '/auth/new-password'
+      path: '/auth/new-password'
+      fullPath: '/auth/new-password'
+      preLoaderRoute: typeof AuthNewPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/recovery': {
+      id: '/auth/recovery'
+      path: '/auth/recovery'
+      fullPath: '/auth/recovery'
+      preLoaderRoute: typeof AuthRecoveryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/student': {
       id: '/auth/student'
       path: '/auth/student'
       fullPath: '/auth/student'
       preLoaderRoute: typeof AuthStudentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout/sucesso': {
+      id: '/checkout/sucesso'
+      path: '/checkout/sucesso'
+      fullPath: '/checkout/sucesso'
+      preLoaderRoute: typeof CheckoutSucessoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/admin/': {
@@ -757,7 +817,10 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
+  AuthNewPasswordRoute: AuthNewPasswordRoute,
+  AuthRecoveryRoute: AuthRecoveryRoute,
   AuthStudentRoute: AuthStudentRoute,
+  CheckoutSucessoRoute: CheckoutSucessoRoute,
   AuthIndexRoute: AuthIndexRoute,
 }
 export const routeTree = rootRouteImport

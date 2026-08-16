@@ -8,7 +8,7 @@ import { PIRLS_PROCESSES, GeneratedPayload, GenerateInput, ReorderInput } from "
 /** Generate a balanced PIRLS text + questions and (optionally) insert as a new page in a simulado. */
 export const generateTextAndQuestionsFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => GenerateInput.parse(input))
+  .validator((input: unknown) => GenerateInput.parse(input))
   .handler(async ({ data, context }) => {
     // Só editores da escola podem gerar conteúdo (alunos são rejeitados antes da IA).
     const schoolId = await resolveSchoolIdForGeneration(context.supabase, context.userId);
@@ -146,7 +146,7 @@ Retorne em JSON.`,
  */
 export const reorderFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => ReorderInput.parse(input))
+  .validator((input: unknown) => ReorderInput.parse(input))
   .handler(async ({ data, context }) => {
     const table = data.type === "page" ? "simulado_pages" : "simulado_blocks";
     const results = await Promise.all(

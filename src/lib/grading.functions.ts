@@ -24,7 +24,7 @@ function assertNotRateLimited(userId: string, maxCalls = 8, windowMs = 60_000): 
  */
 export const gradeAttemptFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => GradeInput.parse(input))
+  .validator((input: unknown) => GradeInput.parse(input))
   .handler(async ({ data, context }) => {
     // Rate limit por usuário antes de qualquer chamada de IA.
     assertNotRateLimited(context.userId);

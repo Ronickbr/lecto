@@ -9,7 +9,7 @@ import { buildRubric, GenerateRubricInput, GenerateMissingRubricsInput } from ".
  */
 export const generateRubricFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((raw: unknown) => GenerateRubricInput.parse(raw))
+  .validator((raw: unknown) => GenerateRubricInput.parse(raw))
   .handler(async ({ data, context }) => {
     const { data: question, error } = await context.supabase
       .from("questions")
@@ -72,7 +72,7 @@ export const generateRubricFn = createServerFn({ method: "POST" })
  */
 export const generateMissingRubricsFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((raw: unknown) => GenerateMissingRubricsInput.parse(raw))
+  .validator((raw: unknown) => GenerateMissingRubricsInput.parse(raw))
   .handler(async ({ data, context }) => {
     // Só editores da escola (ou super_admin) podem gerar rubricas em lote.
     await assertCanManageSchool(context.supabase, context.userId, data.schoolId);

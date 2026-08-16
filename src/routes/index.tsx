@@ -15,17 +15,10 @@ import {
 import { lazy, Suspense } from "react";
 import { motion } from "framer-motion";
 
-<<<<<<< HEAD
 const heroReading = "/assets/hero-reading.webp";
 const featureBook = "/assets/feature-book.webp";
 const featureTeacher = "/assets/feature-teacher.webp";
 const featureBooks = "/assets/feature-books.webp";
-=======
-const heroReading = "assets/hero-reading.webp";
-const featureBook = "assets/feature-book.webp";
-const featureTeacher = "assets/feature-teacher.webp";
-const featureBooks = "assets/feature-books.webp";
->>>>>>> 61a362208237377c540f4247231f0009f6d874c6
 
 export const Route = createFileRoute("/")({
   head: () => ({
