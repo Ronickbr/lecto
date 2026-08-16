@@ -10,7 +10,11 @@ export type AppRole = Database["public"]["Enums"]["app_role"];
 export interface CurrentUserData {
   userId: string;
   email: string | null;
-  profile: { full_name: string | null; avatar_url: string | null } | null;
+  profile: {
+    full_name: string | null;
+    avatar_url: string | null;
+    phone: string | null;
+  } | null;
   roles: AppRole[];
   primaryRole: AppRole | null;
   schoolId: string | null;
@@ -53,7 +57,11 @@ async function fetchCurrentUser(): Promise<CurrentUserData | null> {
   try {
     const [{ data: profile, error: profileError }, { data: roles, error: rolesError }] =
       await Promise.all([
-        supabase.from("profiles").select("full_name, avatar_url").eq("id", user.id).maybeSingle(),
+        supabase
+          .from("profiles")
+          .select("full_name, avatar_url, phone")
+          .eq("id", user.id)
+          .maybeSingle(),
         supabase.from("user_roles").select("role, school_id").eq("user_id", user.id),
       ]);
 

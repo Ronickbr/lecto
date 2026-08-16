@@ -32,33 +32,8 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [error, setError] = useState("");
   const [checkingSession, setCheckingSession] = useState(true);
-
-  // Exibir/esconder senha
-  const togglePasswordVisibility = () => {
-    // This would normally toggle visibility, but we removed the visibility toggle
-  };
-
-  // Iniciar fluxo de recuperação
-  const handleRecoverPassword = async () => {
-    if (!email) return toast.error("Informe seu email");
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOtp({ email });
-      if (error) throw error;
-      toast.success("Código enviado! Verifique seu email.");
-      setEmail("");
-      // Navigamos para a página de recuperação
-      navigate({ to: "/auth/recovery" });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao enviar código de recuperação");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Sign in
   async function handleSignIn(e: React.FormEvent) {
@@ -136,10 +111,9 @@ function AuthPage() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="signin">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Entrar</TabsTrigger>
                 <TabsTrigger value="signup">Criar conta</TabsTrigger>
-                <TabsTrigger value="recovery">Recuperar senha</TabsTrigger>
               </TabsList>
 
               <TabsContent value="signin">
@@ -173,18 +147,6 @@ function AuthPage() {
                     </Link>
                   </div>
                 </form>
-              </TabsContent>
-
-              <TabsContent value="recovery">
-                <div className="py-8">
-                  <h3 className="mb-4 text-center text-lg font-medium">Recuperar Senha</h3>
-                  <p className="text-center text-muted-foreground mb-6">
-                    Clique no botão abaixo para solicitar um link de recuperação de senha.
-                  </p>
-                  <Button onClick={() => handleRecoverPassword()} className="w-full">
-                    Enviar Link de Recuperação
-                  </Button>
-                </div>
               </TabsContent>
 
               <TabsContent value="signup">
