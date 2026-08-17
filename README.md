@@ -24,9 +24,13 @@ O **Lecto** é uma plataforma edtech SaaS de avaliação e desenvolvimento de co
 
 - 🏫 **Multi-tenancy por escola**: hierarquia Super Admin → Gestor Escolar → Professor → Aluno, com isolamento por RLS.
 - 📊 **Matriz PIRLS**: questões categorizadas nos 4 processos de compreensão leitora.
-- 📝 **Simulados e avaliações**: criação, agendamento e correção (manual e por IA).
+- 📝 **Simulados e avaliações**: criação, agendamento e correção (manual e por IA), com fluxo de geração unificado.
 - 🔑 **Acesso aluno simplificado**: login por Código da Turma + PIN de 4 dígitos, com rotação de senha e rate limiting.
 - 📈 **Dashboards de impacto**: comparativos de turmas, alunos e habilidades críticas.
+- 💳 **Planos e pagamentos**: assinaturas por escola via Mercado Pago e InfinityPay, com webhooks verificados e checkout dedicado.
+- 📦 **Limites por plano**: quotas de professores, alunos e simulados mensais por escola (e de escolas por plano) aplicadas no backend.
+- 👤 **Perfil completo**: avatar, troca de senha inline, recuperação de acesso e logout.
+- 🛡️ **Erros amigáveis**: tratamento centralizado de erros — título, descrição e "como resolver" em pt-BR, com detalhes técnicos registrados apenas no servidor.
 
 ---
 
