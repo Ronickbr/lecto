@@ -9,7 +9,6 @@ export const CreateSchoolSchema = z.object({
   cnpj: z.string().nullable().optional(),
   city: z.string().nullable().optional(),
   state: z.string().nullable().optional(),
-  planId: z.string().uuid().nullable().optional(),
   adminEmail: z.string().email(),
   adminName: z.string().min(1),
   adminPassword: z.string().min(6),

@@ -30,7 +30,6 @@ const MASSA = {
     slug: `escola-qa-lecto-170826-${SUFFIX}`,
     cidade: "Curitiba",
     uf: "PR",
-    plano: "Profissional",
   },
   admin: {
     nome: "Amanda Gestora QA",
@@ -320,7 +319,6 @@ test("CT-ESC-01 — Criar escola + administrador", async () => {
       await l.dispatchEvent("input");
     }
     await page.waitForTimeout(300);
-    await selectOptionByLabel("Selecione um plano|Plano", MASSA.escola.plano);
     await snap("CT-ESC-01_01-form-preenchido");
     await page
       .getByRole("button", { name: /Criar escola/i })
@@ -405,7 +403,6 @@ test("CT-ESC-03 — Duplicidade de slug e e-mail", async () => {
       await inputs.nth(i + 1).fill(fields[i], { force: true });
       await inputs.nth(i + 1).dispatchEvent("input");
     }
-    await selectOptionByLabel("Selecione um plano", MASSA.escola.plano);
     await page
       .getByRole("button", { name: /Criar escola/i })
       .first()
