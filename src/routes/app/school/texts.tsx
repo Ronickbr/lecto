@@ -541,6 +541,8 @@ function TextFormDialog({
                     type="button"
                     size="sm"
                     variant="outline"
+                    aria-label="Fazer upload de imagem para o corpo do texto (1 imagem por texto, máximo 5 MB)"
+                    data-e2e="text-upload-image-btn"
                     disabled={uploading || hasImage}
                     onClick={() => fileRef.current?.click()}
                   >
@@ -909,6 +911,25 @@ function TextDetailDialog({
                     </div>
                   </Card>
                 ))}
+              </div>
+              <div className="rounded-md border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
+                <p className="mb-1 font-medium text-foreground">Dicas rápidas</p>
+                <ul className="list-disc space-y-0.5 pl-5">
+                  <li>
+                    Após salvar, use a ação{" "}
+                    <strong className="text-foreground">Ver / questões</strong> na tabela para
+                    adicionar questões manualmente.
+                  </li>
+                  <li>
+                    Para gerar texto + questões com IA, feche este diálogo e use{" "}
+                    <strong className="text-foreground">Gerar com IA</strong> na barra superior.
+                  </li>
+                  <li>
+                    No editor de simulados, inclua um{" "}
+                    <strong className="text-foreground">bloco Questão</strong> e reutilize qualquer
+                    questão cadastrada.
+                  </li>
+                </ul>
               </div>
             </div>
           </div>

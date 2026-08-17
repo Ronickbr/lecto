@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { createTeacherFn } from "@/lib/staff.functions";
 import { updateTeacherFn, resetTeacherPasswordFn, deleteTeacherFn } from "@/lib/manage.functions";
+import { getPlanUsageFn } from "@/lib/plan-limits.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -81,6 +82,7 @@ function TeachersPage() {
   const schoolId = user?.schoolId;
   const qc = useQueryClient();
   const createTeacher = useServerFn(createTeacherFn);
+  const getPlanUsage = useServerFn(getPlanUsageFn);
   const updateTeacher = useServerFn(updateTeacherFn);
   const resetPassword = useServerFn(resetTeacherPasswordFn);
   const deleteTeacher = useServerFn(deleteTeacherFn);
@@ -89,6 +91,8 @@ function TeachersPage() {
   const [busy, setBusy] = useState(false);
   const [q, setQ] = useState("");
   const [form, setForm] = useState({ fullName: "", email: "", password: "", subjects: "" });
+  const [tForm, setTForm] = useState<Record<string, boolean>>({});
+  const [eForm, setEForm] = useState<Record<string, string | null>>({});
   const [editing, setEditing] = useState<TeacherRow | null>(null);
   const [editForm, setEditForm] = useState({ fullName: "", subjects: "" });
   const [pwTarget, setPwTarget] = useState<TeacherRow | null>(null);
@@ -107,6 +111,12 @@ function TeachersPage() {
       if (error) throw error;
       return data as TeacherRow[];
     },
+  });
+
+  const { data: planUsage } = useQuery({
+    queryKey: ["plan-usage", schoolId],
+    enabled: !!schoolId,
+    queryFn: async () => getPlanUsage({ data: { schoolId: schoolId! } }),
   });
 
   const filtered = useMemo(() => {
@@ -144,6 +154,21 @@ function TeachersPage() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!schoolId) return;
+    const errors: Record<string, string | null> = {};
+    if (!form.fullName.trim()) errors.fullName = "Informe o nome completo";
+    else if (form.fullName.trim().split(/\s+/).length < 2)
+      errors.fullName = "Informe nome e sobrenome";
+    if (!form.email.trim()) errors.email = "Informe o e-mail";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = "E-mail inválido";
+    if (!form.password) errors.password = "Informe a senha temporária";
+    else if (form.password.length < 6) errors.password = "Senha deve ter pelo menos 6 caracteres";
+    if (!form.subjects) errors.subjects = "Selecione o cargo ou disciplina";
+    setEForm(errors);
+    setTForm({ fullName: true, email: true, password: true, subjects: true });
+    if (Object.values(errors).some(Boolean)) {
+      showError("Verifique os campos destacados antes de continuar.");
+      return;
+    }
     const ok = await run(
       () =>
         createTeacher({
@@ -160,6 +185,9 @@ function TeachersPage() {
     if (ok) {
       setOpen(false);
       setForm({ fullName: "", email: "", password: "", subjects: "" });
+      setQ("");
+      setTForm({});
+      setEForm({});
     }
   }
 
@@ -188,6 +216,28 @@ function TeachersPage() {
             Cadastre primeiramente a Diretoria, Pedagogos e Professores antes de prosseguir com
             turmas e alunos.
           </p>
+          {planUsage && (
+            <p className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+              <Badge
+                variant="outline"
+                className={
+                  planUsage.maxTeachers && planUsage.teachers >= planUsage.maxTeachers
+                    ? "border-destructive text-destructive"
+                    : ""
+                }
+              >
+                {planUsage.teachers}
+                {planUsage.maxTeachers != null ? ` de ${planUsage.maxTeachers}` : ""}
+                {" professores"}
+                {planUsage.planName ? ` · Plano ${planUsage.planName}` : ""}
+              </Badge>
+              {planUsage.maxTeachers != null && planUsage.teachers >= planUsage.maxTeachers && (
+                <span className="font-medium text-destructive">
+                  Limite atingido — remova usuários ou eleve o plano.
+                </span>
+              )}
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={exportCsv} disabled={!filtered.length}>
@@ -200,7 +250,7 @@ function TeachersPage() {
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <form onSubmit={handleCreate} className="space-y-4">
+              <form onSubmit={handleCreate} className="space-y-4" noValidate>
                 <DialogHeader>
                   <DialogTitle>Novo profissional</DialogTitle>
                 </DialogHeader>
@@ -209,8 +259,27 @@ function TeachersPage() {
                   <Input
                     required
                     value={form.fullName}
+                    className={
+                      tForm.fullName && eForm.fullName
+                        ? "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive"
+                        : ""
+                    }
+                    onBlur={() => {
+                      setTForm((t) => ({ ...t, fullName: true }));
+                      setEForm((e) => ({
+                        ...e,
+                        fullName: !form.fullName.trim()
+                          ? "Informe o nome completo"
+                          : form.fullName.trim().split(/\s+/).length < 2
+                            ? "Informe nome e sobrenome"
+                            : null,
+                      }));
+                    }}
                     onChange={(e) => setForm({ ...form, fullName: e.target.value })}
                   />
+                  {tForm.fullName && eForm.fullName && (
+                    <p className="text-xs font-medium text-destructive">{eForm.fullName}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Email</Label>
@@ -218,8 +287,27 @@ function TeachersPage() {
                     type="email"
                     required
                     value={form.email}
+                    className={
+                      tForm.email && eForm.email
+                        ? "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive"
+                        : ""
+                    }
+                    onBlur={() => {
+                      setTForm((t) => ({ ...t, email: true }));
+                      setEForm((e) => ({
+                        ...e,
+                        email: !form.email.trim()
+                          ? "Informe o e-mail"
+                          : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
+                            ? "E-mail inválido"
+                            : null,
+                      }));
+                    }}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
                   />
+                  {tForm.email && eForm.email && (
+                    <p className="text-xs font-medium text-destructive">{eForm.email}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Senha temporária</Label>
@@ -227,16 +315,48 @@ function TeachersPage() {
                     required
                     minLength={6}
                     value={form.password}
+                    className={
+                      tForm.password && eForm.password
+                        ? "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive"
+                        : ""
+                    }
+                    onBlur={() => {
+                      setTForm((t) => ({ ...t, password: true }));
+                      setEForm((e) => ({
+                        ...e,
+                        password: !form.password
+                          ? "Informe a senha temporária"
+                          : form.password.length < 6
+                            ? "Senha deve ter pelo menos 6 caracteres"
+                            : null,
+                      }));
+                    }}
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
                   />
+                  {tForm.password && eForm.password && (
+                    <p className="text-xs font-medium text-destructive">{eForm.password}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Cargo / Disciplina</Label>
                   <Select
                     value={form.subjects}
-                    onValueChange={(v) => setForm({ ...form, subjects: v })}
+                    onValueChange={(v) => {
+                      setForm({ ...form, subjects: v });
+                      setTForm((t) => ({ ...t, subjects: true }));
+                      setEForm((e) => ({
+                        ...e,
+                        subjects: v ? null : "Selecione o cargo ou disciplina",
+                      }));
+                    }}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger
+                      className={
+                        tForm.subjects && eForm.subjects
+                          ? "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive"
+                          : ""
+                      }
+                    >
                       <SelectValue placeholder="Selecione o cargo ou disciplina" />
                     </SelectTrigger>
                     <SelectContent>
@@ -247,6 +367,9 @@ function TeachersPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {tForm.subjects && eForm.subjects && (
+                    <p className="text-xs font-medium text-destructive">{eForm.subjects}</p>
+                  )}
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={busy}>
@@ -259,14 +382,33 @@ function TeachersPage() {
         </div>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          className="pl-9"
-          placeholder="Buscar por nome, email ou disciplina"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative min-w-[220px] flex-1 sm:max-w-sm">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="pl-9 pr-9"
+            placeholder="Buscar por nome, email ou disciplina"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          {q && (
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label="Limpar busca"
+              className="absolute right-1 top-1/2 size-7 -translate-y-1/2"
+              onClick={() => setQ("")}
+            >
+              <span aria-hidden className="text-lg leading-none">
+                ×
+              </span>
+            </Button>
+          )}
+        </div>
+        <Badge variant="secondary">
+          {(filtered ?? []).length} de {(teachers ?? []).length} profissional(is)
+        </Badge>
       </div>
 
       <Card className="overflow-hidden shadow-soft">

@@ -454,10 +454,78 @@ function NewSchoolForm({
     adminEmail: "",
     adminPassword: "",
   });
+  const [errors, setErrors] = useState<Record<string, string | null>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  function validateField(key: string, value: string | null): string | null {
+    switch (key) {
+      case "name":
+        if (!value || !value.trim()) return "Informe o nome da escola";
+        if (value.trim().length < 3) return "Nome deve ter pelo menos 3 caracteres";
+        return null;
+      case "slug":
+        if (!value || !value.trim()) return "Informe o slug (URL amigável)";
+        if (!/^[-a-z0-9]+$/.test(value)) return "Use apenas letras minúsculas, números e hífen";
+        if (value.length < 3) return "Slug deve ter pelo menos 3 caracteres";
+        return null;
+      case "city":
+        if (!value || !value.trim()) return "Informe a cidade";
+        return null;
+      case "state":
+        if (!value || !value.trim()) return "Informe a UF";
+        if (!/^[A-Z]{2}$/.test(value)) return "UF deve ter 2 letras maiúsculas";
+        return null;
+      case "planId":
+        if (!value) return "Selecione um plano";
+        return null;
+      case "adminName":
+        if (!value || !value.trim()) return "Informe o nome do administrador";
+        if (value.trim().split(/\s+/).length < 2) return "Informe nome e sobrenome";
+        return null;
+      case "adminEmail":
+        if (!value || !value.trim()) return "Informe o e-mail do administrador";
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "E-mail inválido";
+        return null;
+      case "adminPassword":
+        if (!value) return "Informe a senha temporária";
+        if (value.length < 6) return "Senha deve ter pelo menos 6 caracteres";
+        return null;
+      default:
+        return null;
+    }
+  }
+
+  function validateAll(): boolean {
+    const next: Record<string, string | null> = {};
+    const keys: (keyof typeof form)[] = [
+      "name",
+      "slug",
+      "city",
+      "state",
+      "planId",
+      "adminName",
+      "adminEmail",
+      "adminPassword",
+    ];
+    for (const k of keys) next[k] = validateField(k, String(form[k] ?? ""));
+    setErrors(next);
+    setTouched(Object.fromEntries(keys.map((k) => [k, true])));
+    return Object.values(next).every((v) => !v);
+  }
+
+  function fieldClass(key: string) {
+    const has = touched[key] && errors[key];
+    return `rounded-xl ${has ? "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive" : ""}`;
+  }
+
   return (
     <form
       onSubmit={async (e) => {
         e.preventDefault();
+        if (!validateAll()) {
+          showError("Verifique os campos destacados antes de continuar.");
+          return;
+        }
         setBusy(true);
         try {
           await onSubmit(form);
@@ -466,6 +534,7 @@ function NewSchoolForm({
         }
       }}
       className="space-y-4"
+      noValidate
     >
       <DialogHeader>
         <DialogTitle>Nova escola</DialogTitle>
@@ -476,8 +545,12 @@ function NewSchoolForm({
           <Label>Nome</Label>
           <Input
             required
-            className="rounded-xl"
+            className={fieldClass("name")}
             value={form.name}
+            onBlur={() => {
+              setTouched((t) => ({ ...t, name: true }));
+              setErrors((e) => ({ ...e, name: validateField("name", form.name) }));
+            }}
             onChange={(e) =>
               setForm({
                 ...form,
@@ -491,42 +564,71 @@ function NewSchoolForm({
               })
             }
           />
+          {touched.name && errors.name && (
+            <p className="text-xs font-medium text-destructive">{errors.name}</p>
+          )}
         </div>
         <div className="col-span-2 space-y-2">
           <Label>Slug (URL amigável)</Label>
           <Input
             required
-            pattern="[a-z0-9-]+"
-            className="rounded-xl"
+            pattern="[-a-z0-9]+"
+            className={fieldClass("slug")}
             placeholder="colegio-exemplo"
             value={form.slug}
+            onBlur={() => {
+              setTouched((t) => ({ ...t, slug: true }));
+              setErrors((e) => ({ ...e, slug: validateField("slug", form.slug) }));
+            }}
             onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase() })}
           />
+          {touched.slug && errors.slug && (
+            <p className="text-xs font-medium text-destructive">{errors.slug}</p>
+          )}
         </div>
         <div className="space-y-2">
           <Label>Cidade</Label>
           <Input
-            className="rounded-xl"
+            className={fieldClass("city")}
             value={form.city}
+            onBlur={() => {
+              setTouched((t) => ({ ...t, city: true }));
+              setErrors((e) => ({ ...e, city: validateField("city", form.city) }));
+            }}
             onChange={(e) => setForm({ ...form, city: e.target.value })}
           />
+          {touched.city && errors.city && (
+            <p className="text-xs font-medium text-destructive">{errors.city}</p>
+          )}
         </div>
         <div className="space-y-2">
           <Label>UF</Label>
           <Input
             maxLength={2}
-            className="rounded-xl"
+            className={fieldClass("state")}
             value={form.state}
+            onBlur={() => {
+              setTouched((t) => ({ ...t, state: true }));
+              setErrors((e) => ({ ...e, state: validateField("state", form.state) }));
+            }}
             onChange={(e) => setForm({ ...form, state: e.target.value.toUpperCase() })}
           />
+          {touched.state && errors.state && (
+            <p className="text-xs font-medium text-destructive">{errors.state}</p>
+          )}
         </div>
         <div className="col-span-2 space-y-2">
           <Label>Plano</Label>
           <Select
             value={form.planId ?? ""}
-            onValueChange={(v) => setForm({ ...form, planId: v || null })}
+            onValueChange={(v) => {
+              const nv = v || null;
+              setForm({ ...form, planId: nv });
+              setTouched((t) => ({ ...t, planId: true }));
+              setErrors((e) => ({ ...e, planId: validateField("planId", nv) }));
+            }}
           >
-            <SelectTrigger className="rounded-xl">
+            <SelectTrigger className={fieldClass("planId")}>
               <SelectValue placeholder="Selecione um plano" />
             </SelectTrigger>
             <SelectContent>
@@ -537,6 +639,9 @@ function NewSchoolForm({
               ))}
             </SelectContent>
           </Select>
+          {touched.planId && errors.planId && (
+            <p className="text-xs font-medium text-destructive">{errors.planId}</p>
+          )}
         </div>
       </div>
 
@@ -547,30 +652,57 @@ function NewSchoolForm({
             <Label>Nome</Label>
             <Input
               required
-              className="rounded-xl"
+              className={fieldClass("adminName")}
               value={form.adminName}
+              onBlur={() => {
+                setTouched((t) => ({ ...t, adminName: true }));
+                setErrors((e) => ({ ...e, adminName: validateField("adminName", form.adminName) }));
+              }}
               onChange={(e) => setForm({ ...form, adminName: e.target.value })}
             />
+            {touched.adminName && errors.adminName && (
+              <p className="text-xs font-medium text-destructive">{errors.adminName}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label>E-mail</Label>
             <Input
               type="email"
               required
-              className="rounded-xl"
+              className={fieldClass("adminEmail")}
               value={form.adminEmail}
+              onBlur={() => {
+                setTouched((t) => ({ ...t, adminEmail: true }));
+                setErrors((e) => ({
+                  ...e,
+                  adminEmail: validateField("adminEmail", form.adminEmail),
+                }));
+              }}
               onChange={(e) => setForm({ ...form, adminEmail: e.target.value })}
             />
+            {touched.adminEmail && errors.adminEmail && (
+              <p className="text-xs font-medium text-destructive">{errors.adminEmail}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label>Senha temporária</Label>
             <Input
               required
               minLength={6}
-              className="rounded-xl"
+              className={fieldClass("adminPassword")}
               value={form.adminPassword}
+              onBlur={() => {
+                setTouched((t) => ({ ...t, adminPassword: true }));
+                setErrors((e) => ({
+                  ...e,
+                  adminPassword: validateField("adminPassword", form.adminPassword),
+                }));
+              }}
               onChange={(e) => setForm({ ...form, adminPassword: e.target.value })}
             />
+            {touched.adminPassword && errors.adminPassword && (
+              <p className="text-xs font-medium text-destructive">{errors.adminPassword}</p>
+            )}
           </div>
         </div>
       </div>
