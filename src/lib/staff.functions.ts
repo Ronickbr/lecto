@@ -17,9 +17,16 @@ export const createSchoolFn = createServerFn({ method: "POST" })
     if (!isSuper) throw new Error("Apenas o administrador geral pode criar escolas");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { assertPlanSchoolCapacity } = await import("./plan-limits.server");
 
-    if (data.planId) await assertPlanSchoolCapacity(supabaseAdmin, data.planId);
+    // Toda nova escola entra em trial com limites reduzidos (1 professor,
+    // 25 alunos, 5 simulados/mês). O plano pago é escolhido depois na aba
+    // Assinatura do painel da escola.
+    const { data: trialPlan } = await supabaseAdmin
+      .from("plans")
+      .select("id")
+      .eq("tier", "free")
+      .eq("active", true)
+      .maybeSingle();
 
     // Create school
     const { data: school, error: sErr } = await supabaseAdmin
@@ -30,7 +37,8 @@ export const createSchoolFn = createServerFn({ method: "POST" })
         cnpj: data.cnpj ?? null,
         city: data.city ?? null,
         state: data.state ?? null,
-        plan_id: data.planId ?? null,
+        plan_id: trialPlan?.id ?? null,
+        subscription_status: "trial",
         created_by: context.userId,
       })
       .select()

@@ -409,7 +409,6 @@ function SchoolsPage() {
       <Dialog open={!!openNew} onOpenChange={(v) => navigate({ search: v ? { new: true } : {} })}>
         <DialogContent className="rounded-2xl sm:max-w-lg">
           <NewSchoolForm
-            plans={plans ?? []}
             onSubmit={async (v) => {
               try {
                 await createSchool({ data: v });
@@ -428,16 +427,13 @@ function SchoolsPage() {
 }
 
 function NewSchoolForm({
-  plans,
   onSubmit,
 }: {
-  plans: { id: string; name: string }[];
   onSubmit: (v: {
     name: string;
     slug: string;
     city: string;
     state: string;
-    planId: string | null;
     adminName: string;
     adminEmail: string;
     adminPassword: string;
@@ -449,7 +445,6 @@ function NewSchoolForm({
     slug: "",
     city: "",
     state: "",
-    planId: null as string | null,
     adminName: "",
     adminEmail: "",
     adminPassword: "",
@@ -475,9 +470,6 @@ function NewSchoolForm({
         if (!value || !value.trim()) return "Informe a UF";
         if (!/^[A-Z]{2}$/.test(value)) return "UF deve ter 2 letras maiúsculas";
         return null;
-      case "planId":
-        if (!value) return "Selecione um plano";
-        return null;
       case "adminName":
         if (!value || !value.trim()) return "Informe o nome do administrador";
         if (value.trim().split(/\s+/).length < 2) return "Informe nome e sobrenome";
@@ -502,7 +494,6 @@ function NewSchoolForm({
       "slug",
       "city",
       "state",
-      "planId",
       "adminName",
       "adminEmail",
       "adminPassword",
@@ -617,31 +608,14 @@ function NewSchoolForm({
             <p className="text-xs font-medium text-destructive">{errors.state}</p>
           )}
         </div>
-        <div className="col-span-2 space-y-2">
-          <Label>Plano</Label>
-          <Select
-            value={form.planId ?? ""}
-            onValueChange={(v) => {
-              const nv = v || null;
-              setForm({ ...form, planId: nv });
-              setTouched((t) => ({ ...t, planId: true }));
-              setErrors((e) => ({ ...e, planId: validateField("planId", nv) }));
-            }}
-          >
-            <SelectTrigger className={fieldClass("planId")}>
-              <SelectValue placeholder="Selecione um plano" />
-            </SelectTrigger>
-            <SelectContent>
-              {plans.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {touched.planId && errors.planId && (
-            <p className="text-xs font-medium text-destructive">{errors.planId}</p>
-          )}
+        <div className="col-span-2 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 text-sm">
+          <p className="font-medium text-amber-700 dark:text-amber-400">
+            Toda nova escola começa no plano Trial
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            1 professor, 25 alunos e até 5 simulados por mês. O plano pode ser alterado depois pela
+            aba <span className="font-medium">Assinatura</span> no painel da escola.
+          </p>
         </div>
       </div>
 
