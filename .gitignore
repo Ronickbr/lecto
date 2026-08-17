@@ -44,6 +44,7 @@ pnpm-lock.yaml
 
 playwright-report
 test-results
+.pw-browsers/
 full_vps_*.sql
 supabase/.temp/
 supabase/.branches/
