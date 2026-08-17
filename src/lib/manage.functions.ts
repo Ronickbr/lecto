@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
@@ -104,6 +105,163 @@ export const deleteTeacherFn = createServerFn({ method: "POST" })
       if (uErr)
         throw new Error(`Professor removido, mas a conta de acesso permaneceu: ${uErr.message}`);
     }
+    return { ok: true };
+  });
+
+// ============================================================
+// TURMAS
+// ============================================================
+const classFields = "id, name, grade, academic_year, class_code, teacher_id";
+
+const classSchema = z.object({
+  schoolId: z.string().optional(),
+  name: z.string().trim().min(1).max(120),
+  grade: z.string().max(40).nullable().optional(),
+  academicYear: z.number().int().min(1900).max(2200).nullable().optional(),
+  teacherId: z.string().uuid().nullable().optional(),
+});
+
+async function assertTeacherBelongs(
+  supabaseAdmin: SupabaseClient,
+  schoolId: string,
+  teacherId: string | null | undefined,
+) {
+  if (!teacherId) return;
+  const { data: teacher } = await supabaseAdmin
+    .from("teachers")
+    .select("id")
+    .eq("id", teacherId)
+    .eq("school_id", schoolId)
+    .maybeSingle();
+  if (!teacher) throw new Error("Profissional responsável inválido para esta escola");
+}
+
+async function withTeacherName<T extends { teacher_id: string | null }>(
+  supabaseAdmin: SupabaseClient,
+  row: T,
+) {
+  const teacher = row.teacher_id
+    ? (
+        await supabaseAdmin
+          .from("teachers")
+          .select("full_name")
+          .eq("id", row.teacher_id)
+          .maybeSingle()
+      ).data
+    : null;
+  return { ...row, teacher };
+}
+
+export const createClassFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((raw: unknown) => classSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { assertCanManageSchool, resolveOperationalSchool, uniqueClassCode } =
+      await import("./manage.server");
+    const { buildClassCode } = await import("./class-code");
+
+    const schoolId = await resolveOperationalSchool(
+      context.supabase,
+      supabaseAdmin,
+      context.userId,
+      data.schoolId,
+    );
+    await assertCanManageSchool(context.supabase, context.userId, schoolId);
+    await assertTeacherBelongs(supabaseAdmin, schoolId, data.teacherId);
+
+    const base = buildClassCode({
+      name: data.name,
+      grade: data.grade,
+      academicYear: data.academicYear,
+    });
+    const classCode = await uniqueClassCode(supabaseAdmin, base);
+
+    const { data: created, error } = await supabaseAdmin
+      .from("classes")
+      .insert({
+        school_id: schoolId,
+        name: data.name,
+        grade: data.grade || null,
+        academic_year: data.academicYear ?? null,
+        class_code: classCode,
+        teacher_id: data.teacherId ?? null,
+      })
+      .select(classFields)
+      .single();
+    if (error) throw new Error(error.message);
+
+    return { class: await withTeacherName(supabaseAdmin, created) };
+  });
+
+export const updateClassFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((raw: unknown) =>
+    classSchema.omit({ schoolId: true }).extend({ classId: z.string().uuid() }).parse(raw),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { assertCanManageSchool, uniqueClassCode } = await import("./manage.server");
+    const { buildClassCode } = await import("./class-code");
+
+    const { data: klass } = await supabaseAdmin
+      .from("classes")
+      .select("id, school_id")
+      .eq("id", data.classId)
+      .maybeSingle();
+    if (!klass) throw new Error("Turma não encontrada");
+    await assertCanManageSchool(context.supabase, context.userId, klass.school_id);
+    await assertTeacherBelongs(supabaseAdmin, klass.school_id, data.teacherId);
+
+    const base = buildClassCode({
+      name: data.name,
+      grade: data.grade,
+      academicYear: data.academicYear,
+    });
+    const classCode = await uniqueClassCode(supabaseAdmin, base, data.classId);
+
+    const { data: updated, error } = await supabaseAdmin
+      .from("classes")
+      .update({
+        name: data.name,
+        grade: data.grade || null,
+        academic_year: data.academicYear ?? null,
+        class_code: classCode,
+        teacher_id: data.teacherId ?? null,
+      })
+      .eq("id", data.classId)
+      .select(classFields)
+      .single();
+    if (error) throw new Error(error.message);
+
+    return { class: await withTeacherName(supabaseAdmin, updated) };
+  });
+
+export const deleteClassFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((raw: unknown) => z.object({ classId: z.string().uuid() }).parse(raw))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { assertCanManageSchool } = await import("./manage.server");
+
+    const { data: klass } = await supabaseAdmin
+      .from("classes")
+      .select("id, school_id")
+      .eq("id", data.classId)
+      .maybeSingle();
+    if (!klass) throw new Error("Turma não encontrada");
+    await assertCanManageSchool(context.supabase, context.userId, klass.school_id);
+
+    const { data: students, error: countErr } = await supabaseAdmin
+      .from("students")
+      .select("id", { count: "exact", head: true })
+      .eq("class_id", data.classId);
+    if (countErr) throw new Error(countErr.message);
+    if ((students?.length ?? 0) > 0)
+      throw new Error("Mova ou remova os alunos antes de excluir a turma");
+
+    const { error } = await supabaseAdmin.from("classes").delete().eq("id", data.classId);
+    if (error) throw new Error(error.message);
     return { ok: true };
   });
 
@@ -291,6 +449,9 @@ export const bulkImportStudentsFn = createServerFn({ method: "POST" })
       seen.add(code);
       rows.push(row);
     }
+
+    const { assertResourceLimit } = await import("./plan-limits.server");
+    await assertResourceLimit(supabaseAdmin, data.schoolId, "students", rows.length);
 
     const importRow = async (row: (typeof rows)[number]) => {
       try {

@@ -76,6 +76,56 @@ export async function assertCanManageStudent(
 }
 
 /**
+ * Resolve um class_code único globalmente a partir de um código base,
+ * apêndice "-1", "-2", … enquanto houver colisão. `excludeId` permite manter
+ * o próprio código durante uma edição.
+ */
+export async function uniqueClassCode(
+  admin: SupabaseClient,
+  base: string,
+  excludeId?: string,
+): Promise<string> {
+  for (let i = 0; ; i += 1) {
+    const candidate = i === 0 ? base : `${base}-${i}`;
+    let query = admin.from("classes").select("id").eq("class_code", candidate);
+    if (excludeId) query = query.neq("id", excludeId);
+    const { data } = await query.maybeSingle();
+    if (!data) return candidate;
+  }
+}
+
+/**
+ * Resolve a escola alvo de uma operação administrativa sem confiar no valor
+ * cru vindo do cliente.
+ * - Super admin: aceita o `schoolId` explícito (UUID ou slug legado) e o
+ *   normaliza para o UUID real da tabela schools.
+ * - Demais papéis: deriva da própria conta via `user_school_id` (fail-closed
+ *   quando a conta está em mais de uma escola).
+ */
+const SCHOOL_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function resolveOperationalSchool(
+  supabase: SupabaseClient,
+  admin: SupabaseClient,
+  userId: string,
+  requestedSchoolId?: string | null,
+): Promise<string> {
+  const { data: isSuper } = await supabase.rpc("is_super_admin", { _user_id: userId });
+  if (isSuper === true) {
+    if (!requestedSchoolId) throw new Error("Selecione uma escola");
+    const { data: school } = SCHOOL_UUID_RE.test(requestedSchoolId)
+      ? await admin.from("schools").select("id").eq("id", requestedSchoolId).maybeSingle()
+      : await admin.from("schools").select("id").eq("slug", requestedSchoolId).maybeSingle();
+    if (!school) throw new Error("Escola inválida");
+    return school.id;
+  }
+
+  const { data: ownSchool } = await supabase.rpc("user_school_id", { _user_id: userId });
+  if (!ownSchool) throw new Error("Nenhuma escola associada à sua conta");
+  return ownSchool;
+}
+
+/**
  * Resolve a escola associada para geração de conteúdo por IA.
  */
 export async function resolveSchoolIdForGeneration(

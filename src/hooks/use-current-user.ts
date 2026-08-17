@@ -1,7 +1,6 @@
-import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useImpersonation } from "@/lib/admin/impersonation";
+import { getImpersonation } from "@/lib/admin/impersonation";
 import type { Database } from "@/integrations/supabase/types";
 import type { Session } from "@supabase/supabase-js";
 
@@ -62,7 +61,7 @@ async function fetchCurrentUser(): Promise<CurrentUserData | null> {
           .select("full_name, avatar_url, phone")
           .eq("id", user.id)
           .maybeSingle(),
-        supabase.from("user_roles").select("role, school_id").eq("user_id", user.id),
+        supabase.from("user_roles").select("role").eq("user_id", user.id),
       ]);
 
     if (rolesError) {
@@ -77,7 +76,7 @@ async function fetchCurrentUser(): Promise<CurrentUserData | null> {
     const roleList = (roles ?? []).map((r) => r.role as AppRole);
     const priority: AppRole[] = ["super_admin", "school_admin", "teacher", "student"];
     const primaryRole = priority.find((p) => roleList.includes(p)) ?? null;
-    const schoolId = (roles ?? []).find((r) => r.school_id)?.school_id ?? null;
+    const schoolId = await resolveSchoolId(user.id, roleList);
 
     return {
       userId: user.id,
@@ -93,8 +92,34 @@ async function fetchCurrentUser(): Promise<CurrentUserData | null> {
   }
 }
 
+/**
+ * Resolve a escola do usuário pela mesma fonte autoritativa usada pelo RLS e
+ * pelas server functions (`user_school_id`), evitando divergências entre o que
+ * o cliente acredita ser a escola e o que o banco aceita.
+ *
+ * Super admin personificando uma escola: normaliza o valor gravado (aceita o
+ * UUID real OU um slug legado) para o UUID da tabela schools — valores antigos
+ * no localStorage podem não ser UUIDs e quebrariam qualquer filtro de escola.
+ */
+async function resolveSchoolId(userId: string, roleList: AppRole[]): Promise<string | null> {
+  const imp = getImpersonation();
+
+  if (roleList.includes("super_admin")) {
+    if (!imp?.schoolId) return null;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      imp.schoolId,
+    );
+    const { data: school } = isUuid
+      ? await supabase.from("schools").select("id").eq("id", imp.schoolId).maybeSingle()
+      : await supabase.from("schools").select("id").eq("slug", imp.schoolId).maybeSingle();
+    return school?.id ?? null;
+  }
+
+  const { data: resolved } = await supabase.rpc("user_school_id", { _user_id: userId });
+  return resolved ?? null;
+}
+
 export function useCurrentUser() {
-  const impersonation = useImpersonation();
   const query = useQuery({
     queryKey: ["current-user"],
     queryFn: fetchCurrentUser,
@@ -108,13 +133,5 @@ export function useCurrentUser() {
     refetchOnWindowFocus: false,
   });
 
-  // Super admin "entrar como administrador da escola": mantém o papel real,
-  // mas passa a resolver a escola do tenant selecionado.
-  const data = useMemo(() => {
-    if (!query.data) return query.data;
-    if (!impersonation || !query.data.roles.includes("super_admin")) return query.data;
-    return { ...query.data, schoolId: impersonation.schoolId };
-  }, [query.data, impersonation]);
-
-  return { ...query, data } as typeof query;
+  return query;
 }
