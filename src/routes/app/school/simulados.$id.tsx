@@ -4,7 +4,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { RichTextBody } from "@/components/rich-text";
 import { useServerFn } from "@tanstack/react-start";
-import { generateTextAndQuestionsFn, reorderFn } from "@/lib/simulados.functions";
+import {
+  generateTextAndQuestionsFn,
+  saveGeneratedPageFn,
+  reorderFn,
+} from "@/lib/simulados.functions";
 import {
   DndContext,
   closestCenter,
@@ -50,8 +54,14 @@ import {
   FileText,
   Clock,
   Send,
+  RefreshCw,
+  Check,
+  ListChecks,
+  BookOpen,
+  HelpCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/school/simulados/$id")({
   head: () => ({ meta: [{ title: "Editor de simulado | Lecto" }] }),
@@ -65,12 +75,42 @@ const PROCESS_LABEL: Record<string, string> = {
   evaluate_critique: "Avaliar/criticar",
 };
 
+const CATEGORY_LABEL: Record<string, string> = {
+  literary: "Literário",
+  informational: "Informativo",
+  mixed: "Misto",
+};
+
+const LEVEL_LABEL: Record<string, string> = {
+  easy: "Fácil",
+  medium: "Médio",
+  hard: "Difícil",
+};
+
+const SUGGESTED_TOPICS = [
+  "A descoberta do fogo",
+  "O ciclo da água",
+  "Vida no fundo do mar",
+  "Dia de feira na cidade",
+  "A primeira viagem de avião",
+  "Animais em extinção",
+  "A lenda do curupira",
+  "Como se faz um livro",
+];
+
+const GENERATION_STEPS = [
+  "Planejando o texto de leitura…",
+  "Escrevendo o texto…",
+  "Elaborando as questões…",
+  "Distribuindo os processos PIRLS…",
+  "Revisando o gabarito…",
+];
+
 function SimuladoEditor() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
   const [selectedPage, setSelectedPage] = useState<string | null>(null);
-  const [aiOpen, setAiOpen] = useState(false);
-  const [newPageOpen, setNewPageOpen] = useState(false);
+  const [addMode, setAddMode] = useState<"choose" | "ai" | "manual" | null>(null);
   const reorder = useServerFn(reorderFn);
 
   const { data: simulado } = useQuery({
@@ -157,10 +197,7 @@ function SimuladoEditor() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setAiOpen(true)}>
-            <Sparkles className="size-4" /> Gerar página com IA
-          </Button>
-          <Button variant="outline" onClick={() => setNewPageOpen(true)}>
+          <Button variant="outline" onClick={() => setAddMode("choose")}>
             <Plus className="size-4" /> Nova página
           </Button>
           <Button onClick={() => publishMut.mutate()} disabled={publishMut.isPending}>
@@ -171,12 +208,32 @@ function SimuladoEditor() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)] [&>*]:min-w-0">
-        <Card className="p-3 h-fit">
-          <h3 className="mb-2 px-1 text-sm font-medium text-muted-foreground">
-            Páginas ({pages?.length ?? 0})
-          </h3>
+        <Card className="h-fit p-3">
+          <div className="mb-2 flex items-center justify-between px-1">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              Páginas ({pages?.length ?? 0})
+            </h3>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="size-7"
+              onClick={() => setAddMode("choose")}
+            >
+              <Plus className="size-4" />
+            </Button>
+          </div>
           {!pages?.length && (
-            <p className="p-2 text-sm text-muted-foreground">Adicione a primeira página.</p>
+            <div className="rounded-md border border-dashed border-border p-3 text-center">
+              <p className="text-sm text-muted-foreground">Este simulado ainda não tem páginas.</p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-2"
+                onClick={() => setAddMode("choose")}
+              >
+                <Plus className="size-3.5" /> Nova página
+              </Button>
+            </div>
           )}
           <DndContext
             sensors={sensors}
@@ -223,20 +280,30 @@ function SimuladoEditor() {
           {currentPageId ? (
             <PageDetail pageId={currentPageId} simuladoId={id} />
           ) : (
-            <Card className="p-10 text-center text-muted-foreground">
-              Nenhuma página selecionada.
+            <Card className="p-10 text-center">
+              <div className="mx-auto grid size-12 place-items-center rounded-full bg-primary/10">
+                <FileText className="size-6 text-primary" />
+              </div>
+              <p className="mt-3 font-medium text-foreground">Comece criando uma página</p>
+              <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+                Cada página de um simulado contém um texto de leitura e suas questões. Use a IA para
+                gerar tudo automaticamente a partir de um tema ou crie manualmente.
+              </p>
+              <div className="mt-4 flex justify-center gap-2">
+                <Button variant="outline" onClick={() => setAddMode("manual")}>
+                  <Plus className="size-4" /> Criar manualmente
+                </Button>
+                <Button onClick={() => setAddMode("ai")}>
+                  <Sparkles className="size-4" /> Gerar com IA
+                </Button>
+              </div>
             </Card>
           )}
         </div>
       </div>
 
-      {aiOpen && <AiGeneratePageDialog simuladoId={id} onClose={() => setAiOpen(false)} />}
-      {newPageOpen && (
-        <NewPageDialog
-          simuladoId={id}
-          pageCount={pages?.length ?? 0}
-          onClose={() => setNewPageOpen(false)}
-        />
+      {addMode && (
+        <AddPageDialog simuladoId={id} initialMode={addMode} onClose={() => setAddMode(null)} />
       )}
     </div>
   );
@@ -411,7 +478,22 @@ function PageDetail({ pageId, simuladoId }: { pageId: string; simuladoId: string
                   </div>
                   {b.b_type === "instruction" && <p className="text-sm">{b.content}</p>}
                   {b.b_type === "question" && b.questions && (
-                    <p className="text-sm">{b.questions.statement}</p>
+                    <div>
+                      <p className="text-sm">{b.questions.statement}</p>
+                      {b.questions.q_type === "multiple_choice" &&
+                        ((b.questions.options as string[]) ?? []).length > 0 && (
+                          <div className="mt-2 grid gap-1 sm:grid-cols-2">
+                            {((b.questions.options as string[]) ?? []).map((opt, j) => (
+                              <div
+                                key={j}
+                                className="rounded border border-border px-2 py-1 text-xs text-muted-foreground"
+                              >
+                                {opt}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                    </div>
                   )}
                 </div>
                 <button onClick={() => deleteBlockMut.mutate(b.id)}>
@@ -420,7 +502,22 @@ function PageDetail({ pageId, simuladoId }: { pageId: string; simuladoId: string
               </SortableBlockItem>
             ))}
             {!blocks?.length && (
-              <p className="text-sm text-muted-foreground text-center py-6">Sem blocos ainda.</p>
+              <div className="rounded-md border border-dashed border-border p-6 text-center">
+                <HelpCircle className="mx-auto mb-2 size-5 text-muted-foreground" />
+                <p className="text-sm font-medium">Sem blocos nesta página</p>
+                <p className="mx-auto mt-1 max-w-xs text-xs text-muted-foreground">
+                  Adicione instruções ou questões do banco, ou use a IA para gerar uma página
+                  completa de texto e questões.
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-3"
+                  onClick={() => setAddBlockOpen(true)}
+                >
+                  <Plus className="size-3.5" /> Adicionar bloco
+                </Button>
+              </div>
             )}
           </div>
         </SortableContext>
@@ -460,88 +557,433 @@ function SortableBlockItem({ id, children }: { id: string; children: React.React
   );
 }
 
-function NewPageDialog({
+function AddPageDialog({
   simuladoId,
-  pageCount,
+  initialMode,
   onClose,
 }: {
   simuladoId: string;
-  pageCount: number;
+  initialMode: "choose" | "ai" | "manual";
   onClose: () => void;
 }) {
-  const qc = useQueryClient();
-  const [form, setForm] = useState({ title: "", instructions: "", text_id: "" });
-  const { data: texts } = useQuery({
-    queryKey: ["texts-select"],
-    queryFn: async () =>
-      (await supabase.from("texts").select("id, title").order("title")).data ?? [],
-  });
+  const [mode, setMode] = useState<"choose" | "ai" | "manual">(initialMode);
+  const [wide, setWide] = useState(false);
 
-  const mut = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("simulado_pages").insert({
-        simulado_id: simuladoId,
-        position: pageCount,
-        title: form.title || null,
-        instructions: form.instructions || null,
-        text_id: form.text_id || null,
-      });
-      if (error) throw error;
-    },
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        className={cn(
+          "flex max-h-[85vh] flex-col overflow-hidden",
+          wide ? "sm:max-w-3xl" : "sm:max-w-lg",
+        )}
+      >
+        {mode === "choose" && (
+          <ChoosePageMode
+            onPickAi={() => setMode("ai")}
+            onPickManual={() => setMode("manual")}
+            onClose={onClose}
+          />
+        )}
+        {mode === "ai" && (
+          <AiGenerateContent
+            simuladoId={simuladoId}
+            onClose={onClose}
+            onWideChange={setWide}
+            onBack={() => {
+              setWide(false);
+              setMode("choose");
+            }}
+          />
+        )}
+        {mode === "manual" && (
+          <ManualPageContent
+            simuladoId={simuladoId}
+            onClose={onClose}
+            onBack={() => setMode("choose")}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ChoosePageMode({
+  onPickAi,
+  onPickManual,
+  onClose,
+}: {
+  onPickAi: () => void;
+  onPickManual: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <>
+      <DialogHeader className="border-b pb-3">
+        <DialogTitle className="flex items-center gap-2">
+          <Plus className="size-4 text-primary" /> Nova página
+        </DialogTitle>
+        <p className="text-xs text-muted-foreground">
+          Escolha como quer criar a página do simulado.
+        </p>
+      </DialogHeader>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={onPickAi}
+          className="group rounded-lg border border-border bg-card p-4 text-left transition hover:border-primary/60 hover:bg-accent"
+        >
+          <div className="grid size-10 place-items-center rounded-full bg-primary/10">
+            <Sparkles className="size-5 text-primary" />
+          </div>
+          <p className="mt-3 font-medium">Gerar com IA</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Informe um tema e a IA escreve o texto e as questões automaticamente.
+          </p>
+        </button>
+        <button
+          type="button"
+          onClick={onPickManual}
+          className="group rounded-lg border border-border bg-card p-4 text-left transition hover:border-primary/60 hover:bg-accent"
+        >
+          <div className="grid size-10 place-items-center rounded-full bg-muted">
+            <FileText className="size-5 text-muted-foreground" />
+          </div>
+          <p className="mt-3 font-medium">Criar manualmente</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Escreva o texto e monte as questões com o gabarito por conta própria.
+          </p>
+        </button>
+      </div>
+      <DialogFooter className="border-t pt-3">
+        <Button variant="outline" onClick={onClose}>
+          Cancelar
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+type ManualQuestion = {
+  statement: string;
+  q_type: "multiple_choice" | "open";
+  options: string[];
+  correct_answer: string;
+  pirls_process: string;
+  explanation: string;
+  rubric: string;
+};
+
+const emptyQuestion = (): ManualQuestion => ({
+  statement: "",
+  q_type: "multiple_choice",
+  options: ["", "", "", ""],
+  correct_answer: "",
+  pirls_process: "locate_information",
+  explanation: "",
+  rubric: "",
+});
+
+function ManualPageContent({
+  simuladoId,
+  onClose,
+  onBack,
+}: {
+  simuladoId: string;
+  onClose: () => void;
+  onBack: () => void;
+}) {
+  const qc = useQueryClient();
+  const save = useServerFn(saveGeneratedPageFn);
+  const [form, setForm] = useState({
+    title: "",
+    body: "",
+    category: "literary" as "literary" | "informational" | "mixed",
+    level: "medium" as "easy" | "medium" | "hard",
+  });
+  const [questions, setQuestions] = useState<ManualQuestion[]>([emptyQuestion()]);
+
+  const setQ = (i: number, patch: Partial<ManualQuestion>) =>
+    setQuestions((qs) => qs.map((q, j) => (j === i ? { ...q, ...patch } : q)));
+
+  const saveMut = useMutation({
+    mutationFn: () =>
+      save({
+        data: {
+          simuladoId,
+          payload: {
+            title: form.title,
+            body: form.body,
+            category: form.category,
+            level: form.level,
+            questions: questions.map((q) => ({
+              statement: q.statement,
+              q_type: q.q_type,
+              options: q.options,
+              correct_answer: q.correct_answer,
+              pirls_process: q.pirls_process as ManualQuestion["pirls_process"],
+              explanation: q.explanation,
+              rubric: q.rubric,
+            })),
+          },
+        },
+      }),
     onSuccess: () => {
+      toast.success("Página criada manualmente");
       qc.invalidateQueries({ queryKey: ["simulado-pages", simuladoId] });
+      qc.invalidateQueries({ queryKey: ["texts"] });
       onClose();
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const validQuestions = questions.filter(
+    (q) =>
+      q.statement.trim() &&
+      q.correct_answer.trim() &&
+      (q.q_type === "open" || q.options.every((o) => o.trim())),
+  );
+
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Nova página</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <Label>Título</Label>
+    <>
+      <DialogHeader className="border-b pb-3">
+        <DialogTitle className="flex items-center gap-2">
+          <FileText className="size-4 text-primary" /> Criar página manualmente
+        </DialogTitle>
+      </DialogHeader>
+      <div className="flex-1 space-y-4 overflow-y-auto pr-1">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="manual-title">Título</Label>
             <Input
+              id="manual-title"
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
+              placeholder="Ex.: O ciclo da água"
             />
           </div>
-          <div>
-            <Label>Instruções</Label>
-            <Textarea
-              value={form.instructions}
-              onChange={(e) => setForm({ ...form, instructions: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>Texto associado (opcional)</Label>
-            <Select value={form.text_id} onValueChange={(v) => setForm({ ...form, text_id: v })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione do banco" />
+          <div className="space-y-2">
+            <Label htmlFor="manual-category">Categoria</Label>
+            <Select
+              value={form.category}
+              onValueChange={(v) => setForm({ ...form, category: v as typeof form.category })}
+            >
+              <SelectTrigger id="manual-category">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {texts?.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.title}
-                  </SelectItem>
-                ))}
+                <SelectItem value="literary">Literário</SelectItem>
+                <SelectItem value="informational">Informativo</SelectItem>
+                <SelectItem value="mixed">Misto</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="manual-level">Nível</Label>
+            <Select
+              value={form.level}
+              onValueChange={(v) => setForm({ ...form, level: v as typeof form.level })}
+            >
+              <SelectTrigger id="manual-level">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="easy">Fácil</SelectItem>
+                <SelectItem value="medium">Médio</SelectItem>
+                <SelectItem value="hard">Difícil</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button onClick={() => mut.mutate()} disabled={mut.isPending}>
-            Adicionar
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+
+        <div className="space-y-2">
+          <Label htmlFor="manual-body">Texto de leitura</Label>
+          <Textarea
+            id="manual-body"
+            rows={7}
+            value={form.body}
+            onChange={(e) => setForm({ ...form, body: e.target.value })}
+            placeholder="Cole ou escreva aqui o texto que os alunos vão ler…"
+          />
+        </div>
+
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <Label className="mb-0">Questões ({questions.length})</Label>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setQuestions((qs) => [...qs, emptyQuestion()])}
+            >
+              <Plus className="size-3.5" /> Adicionar questão
+            </Button>
+          </div>
+          <div className="space-y-3">
+            {questions.map((q, i) => (
+              <div key={i} className="rounded-md border border-border p-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium">Questão {i + 1}</p>
+                  {questions.length > 1 && (
+                    <button
+                      type="button"
+                      className="text-xs text-destructive hover:underline"
+                      onClick={() => setQuestions((qs) => qs.filter((_, j) => j !== i))}
+                    >
+                      Remover
+                    </button>
+                  )}
+                </div>
+                <Textarea
+                  rows={2}
+                  value={q.statement}
+                  onChange={(e) => setQ(i, { statement: e.target.value })}
+                  placeholder="Enunciado da questão…"
+                />
+                <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Tipo</Label>
+                    <Select
+                      value={q.q_type}
+                      onValueChange={(v) =>
+                        setQ(i, {
+                          q_type: v as ManualQuestion["q_type"],
+                          options: v === "open" ? [] : ["", "", "", ""],
+                          correct_answer: "",
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="multiple_choice">Múltipla escolha</SelectItem>
+                        <SelectItem value="open">Aberta</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Processo PIRLS</Label>
+                    <Select
+                      value={q.pirls_process}
+                      onValueChange={(v) => setQ(i, { pirls_process: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(PROCESS_LABEL).map(([k, label]) => (
+                          <SelectItem key={k} value={k}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {q.q_type === "multiple_choice" && (
+                  <div className="mt-3 space-y-2">
+                    <Label>Opções</Label>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {["A", "B", "C", "D"].map((letter, oi) => (
+                        <div key={letter} className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {letter}
+                          </span>
+                          <Input
+                            value={q.options[oi] ?? ""}
+                            onChange={(e) => {
+                              const options = [...q.options];
+                              options[oi] = e.target.value;
+                              setQ(i, { options });
+                            }}
+                            placeholder={`Opção ${letter}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Gabarito (alternativa correta)</Label>
+                      <Select
+                        value={q.correct_answer}
+                        onValueChange={(v) => setQ(i, { correct_answer: v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a correta" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {q.options.map((opt, oi) =>
+                            opt.trim() ? (
+                              <SelectItem key={oi} value={opt}>
+                                {["A", "B", "C", "D"][oi]}: {opt}
+                              </SelectItem>
+                            ) : null,
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+                {q.q_type === "open" && (
+                  <div className="mt-3 space-y-2">
+                    <Label>Gabarito (resposta modelo)</Label>
+                    <Input
+                      value={q.correct_answer}
+                      onChange={(e) => setQ(i, { correct_answer: e.target.value })}
+                      placeholder="Resposta esperada do aluno…"
+                    />
+                  </div>
+                )}
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Explicação (opcional)</Label>
+                    <Input
+                      value={q.explanation}
+                      onChange={(e) => setQ(i, { explanation: e.target.value })}
+                      placeholder="Justificativa pedagógica…"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Rubrica (opcional)</Label>
+                    <Input
+                      value={q.rubric}
+                      onChange={(e) => setQ(i, { rubric: e.target.value })}
+                      placeholder="Critérios de correção…"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <DialogFooter className="border-t pt-3">
+        <Button variant="ghost" onClick={onBack}>
+          <ArrowLeft className="size-4" /> Voltar
+        </Button>
+        <Button variant="outline" onClick={onClose} disabled={saveMut.isPending}>
+          Cancelar
+        </Button>
+        <Button
+          onClick={() => saveMut.mutate()}
+          disabled={
+            saveMut.isPending ||
+            !form.title.trim() ||
+            !form.body.trim() ||
+            validQuestions.length !== questions.length
+          }
+        >
+          {saveMut.isPending ? (
+            <>
+              <Loader2 className="size-4 animate-spin" /> Salvando…
+            </>
+          ) : (
+            <>
+              <Check className="size-4" /> Criar página
+            </>
+          )}
+        </Button>
+      </DialogFooter>
+    </>
   );
 }
 
@@ -648,26 +1090,85 @@ function AddBlockDialog({
   );
 }
 
-function AiGeneratePageDialog({
+type GeneratedQuestion = {
+  statement: string;
+  q_type: "multiple_choice" | "open";
+  options: string[];
+  correct_answer: string;
+  pirls_process: string;
+  explanation: string;
+  rubric: string;
+};
+
+type GeneratedPreview = {
+  title: string;
+  body: string;
+  category: "literary" | "informational" | "mixed";
+  level: "easy" | "medium" | "hard";
+  questions: GeneratedQuestion[];
+};
+
+function AiGenerateContent({
   simuladoId,
   onClose,
+  onWideChange,
+  onBack,
 }: {
   simuladoId: string;
   onClose: () => void;
+  onWideChange: (wide: boolean) => void;
+  onBack: () => void;
 }) {
   const qc = useQueryClient();
   const generate = useServerFn(generateTextAndQuestionsFn);
-  const [form, setForm] = useState({
+  const save = useServerFn(saveGeneratedPageFn);
+  const [step, setStep] = useState<"form" | "generating" | "preview">("form");
+  const [preview, setPreview] = useState<GeneratedPreview | null>(null);
+  const [form, setForm] = useState<{
+    topic: string;
+    level: "easy" | "medium" | "hard";
+    category: "literary" | "informational" | "mixed";
+    questionCount: number;
+  }>({
     topic: "",
-    level: "medium" as const,
-    category: "literary" as const,
+    level: "medium",
+    category: "literary",
     questionCount: 8,
   });
 
-  const mut = useMutation({
-    mutationFn: () => generate({ data: { ...form, simuladoId } }),
+  const changeStep = (next: "form" | "generating" | "preview") => {
+    setStep(next);
+    onWideChange(next === "preview");
+  };
+
+  const generateMut = useMutation({
+    mutationFn: () => generate({ data: { ...form, simuladoId, previewOnly: true } }),
+    onMutate: () => {
+      setPreview(null);
+      changeStep("generating");
+    },
+    onSuccess: (res) => {
+      if (res && "preview" in res && res.preview) {
+        setPreview(res.preview as GeneratedPreview);
+        changeStep("preview");
+      } else {
+        toast.error("A IA não retornou um conteúdo válido.");
+        changeStep("form");
+      }
+    },
+    onError: (e: Error) => {
+      toast.error(e.message);
+      changeStep("form");
+    },
+  });
+
+  const saveMut = useMutation({
+    mutationFn: () =>
+      save({
+        data: { simuladoId, payload: preview as GeneratedPreview },
+      }),
     onSuccess: () => {
-      toast.success("Página gerada!");
+      toast.success("Página gerada e adicionada ao simulado");
       qc.invalidateQueries({ queryKey: ["simulado-pages", simuladoId] });
       qc.invalidateQueries({ queryKey: ["texts"] });
       onClose();
@@ -675,82 +1176,340 @@ function AiGeneratePageDialog({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const mcCount = preview?.questions.filter((q) => q.q_type === "multiple_choice").length ?? 0;
+  const openCount = (preview?.questions.length ?? 0) - mcCount;
+
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Gerar página com IA</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <Label>Tema</Label>
-            <Input
-              value={form.topic}
-              onChange={(e) => setForm({ ...form, topic: e.target.value })}
-            />
+    <>
+      <DialogHeader className="border-b pb-3">
+        <DialogTitle className="flex items-center gap-2">
+          <Sparkles className="size-4 text-primary" />
+          {step === "preview" ? "Revisar página gerada" : "Gerar página com IA"}
+        </DialogTitle>
+        {step === "preview" && (
+          <p className="text-xs text-muted-foreground">
+            Revise o texto e as questões antes de adicionar ao simulado.
+          </p>
+        )}
+      </DialogHeader>
+
+      {step === "form" && (
+        <AiGenerateForm
+          form={form}
+          onChange={setForm}
+          onGenerate={() => generateMut.mutate()}
+          onClose={onClose}
+          onBack={onBack}
+          pending={generateMut.isPending}
+        />
+      )}
+
+      {step === "generating" && (
+        <div className="flex flex-col items-center justify-center gap-4 py-10">
+          <div className="relative">
+            <div className="grid size-14 place-items-center rounded-full bg-primary/10">
+              <Sparkles className="size-6 animate-pulse text-primary" />
+            </div>
+            <Loader2 className="absolute -inset-1 size-16 animate-spin text-primary/40" />
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div>
-              <Label>Categoria</Label>
-              <Select
-                value={form.category}
-                onValueChange={(v) => setForm({ ...form, category: v as typeof form.category })}
+          <div className="text-center">
+            <p className="font-medium">Gerando texto e questões…</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Tema: <span className="font-medium text-foreground">{form.topic}</span>
+            </p>
+          </div>
+          <ul className="w-full max-w-xs space-y-1.5">
+            {GENERATION_STEPS.map((s, i) => (
+              <li
+                key={s}
+                className={cn(
+                  "flex items-center gap-2 text-sm transition",
+                  i <= 1 ? "text-muted-foreground" : "text-muted-foreground/40",
+                )}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="literary">Literário</SelectItem>
-                  <SelectItem value="informational">Informativo</SelectItem>
-                  <SelectItem value="mixed">Misto</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Nível</Label>
-              <Select
-                value={form.level}
-                onValueChange={(v) => setForm({ ...form, level: v as typeof form.level })}
+                {i < 1 ? (
+                  <Check className="size-3.5 text-success" />
+                ) : (
+                  <Loader2
+                    className={cn(
+                      "size-3.5",
+                      i === 1 ? "animate-spin text-primary" : "text-muted-foreground/40",
+                    )}
+                  />
+                )}
+                <span className={i > 1 ? "line-through opacity-60" : ""}>{s}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {step === "preview" && preview && (
+        <AiGeneratePreview
+          preview={preview}
+          onSave={() => saveMut.mutate()}
+          onRegenerate={() => {
+            changeStep("form");
+            setPreview(null);
+          }}
+          saving={saveMut.isPending}
+          mcCount={mcCount}
+          openCount={openCount}
+        />
+      )}
+    </>
+  );
+}
+
+function AiGenerateForm({
+  form,
+  onChange,
+  onGenerate,
+  onClose,
+  onBack,
+  pending,
+}: {
+  form: {
+    topic: string;
+    level: "easy" | "medium" | "hard";
+    category: "literary" | "informational" | "mixed";
+    questionCount: number;
+  };
+  onChange: (f: {
+    topic: string;
+    level: "easy" | "medium" | "hard";
+    category: "literary" | "informational" | "mixed";
+    questionCount: number;
+  }) => void;
+  onGenerate: () => void;
+  onClose: () => void;
+  onBack: () => void;
+  pending: boolean;
+}) {
+  return (
+    <>
+      <div className="space-y-4 overflow-y-auto">
+        <div className="space-y-2">
+          <Label htmlFor="ai-topic">Tema do texto</Label>
+          <Input
+            id="ai-topic"
+            value={form.topic}
+            onChange={(e) => onChange({ ...form, topic: e.target.value })}
+            placeholder="Ex.: a descoberta do fogo"
+            disabled={pending}
+          />
+          <div className="flex flex-wrap gap-1.5">
+            {SUGGESTED_TOPICS.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => onChange({ ...form, topic: t })}
+                disabled={pending}
+                className={cn(
+                  "rounded-full border px-2.5 py-1 text-xs transition",
+                  form.topic === t
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:bg-accent hover:text-foreground",
+                )}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="easy">Fácil</SelectItem>
-                  <SelectItem value="medium">Médio</SelectItem>
-                  <SelectItem value="hard">Difícil</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Questões</Label>
-              <Input
-                type="number"
-                min={4}
-                max={16}
-                value={form.questionCount}
-                onChange={(e) => setForm({ ...form, questionCount: Number(e.target.value) })}
-              />
-            </div>
+                {t}
+              </button>
+            ))}
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="ai-category">Categoria</Label>
+            <Select
+              value={form.category}
+              onValueChange={(v) => onChange({ ...form, category: v as typeof form.category })}
+            >
+              <SelectTrigger id="ai-category" disabled={pending}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="literary">Literário</SelectItem>
+                <SelectItem value="informational">Informativo</SelectItem>
+                <SelectItem value="mixed">Misto</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="ai-level">Nível</Label>
+            <Select
+              value={form.level}
+              onValueChange={(v) => onChange({ ...form, level: v as typeof form.level })}
+            >
+              <SelectTrigger id="ai-level" disabled={pending}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="easy">Fácil</SelectItem>
+                <SelectItem value="medium">Médio</SelectItem>
+                <SelectItem value="hard">Difícil</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="ai-count">Questões</Label>
+            <Input
+              id="ai-count"
+              type="number"
+              min={4}
+              max={16}
+              value={form.questionCount}
+              onChange={(e) => onChange({ ...form, questionCount: Number(e.target.value) })}
+              disabled={pending}
+            />
+          </div>
+        </div>
+
+        <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+          A IA cria um texto de 250 a 500 palavras e distribui as {form.questionCount} questões
+          entre os 4 processos PIRLS, misturando múltipla escolha e questões abertas com gabarito.
+        </div>
+      </div>
+      <DialogFooter className="border-t pt-3">
+        <Button variant="ghost" onClick={onBack} disabled={pending}>
+          <ArrowLeft className="size-4" /> Voltar
+        </Button>
+        <Button variant="outline" onClick={() => onClose && onClose()} disabled={pending}>
+          Cancelar
+        </Button>
+        <Button onClick={onGenerate} disabled={form.topic.trim().length < 3 || pending}>
+          {pending ? (
+            <>
+              <Loader2 className="size-4 animate-spin" /> Gerando…
+            </>
+          ) : (
+            <>
+              <Sparkles className="size-4" /> Gerar e revisar
+            </>
+          )}
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+function AiGeneratePreview({
+  preview,
+  onSave,
+  onRegenerate,
+  saving,
+  mcCount,
+  openCount,
+}: {
+  preview: GeneratedPreview;
+  onSave: () => void;
+  onRegenerate: () => void;
+  saving: boolean;
+  mcCount: number;
+  openCount: number;
+}) {
+  const [showAnswers, setShowAnswers] = useState(false);
+
+  return (
+    <>
+      <div className="flex-1 space-y-4 overflow-y-auto pr-1">
+        <div className="rounded-md border border-border p-4">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <h3 className="font-display text-lg leading-tight">{preview.title}</h3>
+            <div className="flex flex-wrap gap-1">
+              <Badge variant="secondary">{CATEGORY_LABEL[preview.category]}</Badge>
+              <Badge variant="outline">{LEVEL_LABEL[preview.level]}</Badge>
+            </div>
+          </div>
+          <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1">
+              <BookOpen className="size-3" />
+              {preview.body.split(/\s+/).filter(Boolean).length} palavras
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <ListChecks className="size-3" />
+              {preview.questions.length} questões ({mcCount} múltipla escolha, {openCount} abertas)
+            </span>
+          </div>
+          <RichTextBody
+            body={preview.body}
+            className="mt-3 max-h-44 overflow-y-auto text-sm leading-relaxed"
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-medium">Questões</h4>
+          <Button size="sm" variant="ghost" onClick={() => setShowAnswers((v) => !v)}>
+            {showAnswers ? "Ocultar gabarito" : "Ver gabarito"}
           </Button>
-          <Button onClick={() => mut.mutate()} disabled={!form.topic || mut.isPending}>
-            {mut.isPending ? (
-              <>
-                <Loader2 className="size-4 animate-spin" /> Gerando…
-              </>
-            ) : (
-              <>
-                <Sparkles className="size-4" /> Gerar
-              </>
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+
+        <ul className="space-y-2">
+          {preview.questions.map((q, i) => (
+            <li key={i} className="rounded-md border border-border p-3">
+              <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                <Badge variant="outline" className="text-[10px]">
+                  {i + 1}
+                </Badge>
+                <Badge variant="secondary" className="text-[10px]">
+                  {PROCESS_LABEL[q.pirls_process] ?? q.pirls_process}
+                </Badge>
+                <Badge variant="outline" className="text-[10px]">
+                  {q.q_type === "multiple_choice" ? "Múltipla escolha" : "Aberta"}
+                </Badge>
+              </div>
+              <p className="text-sm">{q.statement}</p>
+              {q.q_type === "multiple_choice" && q.options.length > 0 && (
+                <div className="mt-2 grid gap-1 sm:grid-cols-2">
+                  {q.options.map((opt, j) => (
+                    <div
+                      key={j}
+                      className={cn(
+                        "rounded border px-2 py-1 text-xs",
+                        showAnswers && q.correct_answer === opt
+                          ? "border-success/50 bg-success/10 font-medium text-foreground"
+                          : "border-border text-muted-foreground",
+                      )}
+                    >
+                      {opt}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {showAnswers && (
+                <div className="mt-2 rounded bg-muted/40 p-2 text-xs">
+                  <p>
+                    <span className="font-medium">Gabarito: </span>
+                    {q.correct_answer}
+                  </p>
+                  {q.explanation && (
+                    <p className="mt-1 text-muted-foreground">
+                      <span className="font-medium text-foreground">Explicação: </span>
+                      {q.explanation}
+                    </p>
+                  )}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <DialogFooter className="border-t pt-3">
+        <Button variant="outline" onClick={onRegenerate} disabled={saving}>
+          <RefreshCw className="size-4" /> Gerar novamente
+        </Button>
+        <Button onClick={onSave} disabled={saving}>
+          {saving ? (
+            <>
+              <Loader2 className="size-4 animate-spin" /> Salvando…
+            </>
+          ) : (
+            <>
+              <Check className="size-4" /> Adicionar página
+            </>
+          )}
+        </Button>
+      </DialogFooter>
+    </>
   );
 }

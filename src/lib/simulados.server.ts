@@ -31,6 +31,13 @@ export const GenerateInput = z.object({
   category: z.enum(["literary", "informational", "mixed"]).default("literary"),
   questionCount: z.number().int().min(4).max(16).default(8),
   simuladoId: z.string().uuid().optional(),
+  /** Quando true, gera e retorna o payload sem persistir nada no banco. */
+  previewOnly: z.boolean().default(false),
+});
+
+export const SaveGeneratedInput = z.object({
+  simuladoId: z.string().uuid().optional(),
+  payload: GeneratedPayload,
 });
 
 export const ReorderInput = z.object({
