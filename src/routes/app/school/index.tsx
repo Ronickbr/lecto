@@ -5,6 +5,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import {
   School,
   Users,
@@ -15,6 +16,7 @@ import {
   Plus,
   ArrowRight,
   CheckCircle2,
+  Package,
 } from "lucide-react";
 
 export const Route = createFileRoute("/app/school/")({
@@ -40,42 +42,53 @@ function SchoolOverview() {
     enabled: !!schoolId,
     queryFn: async () => {
       const since = new Date(Date.now() - 30 * 864e5).toISOString();
-      const [school, teachers, classes, students, simulados, recent, attempts] = await Promise.all([
-        supabase
-          .from("schools")
-          .select("name, slug, city, state")
-          .eq("id", schoolId!)
-          .maybeSingle(),
-        supabase
-          .from("teachers")
-          .select("id", { count: "exact", head: true })
-          .eq("school_id", schoolId!),
-        supabase
-          .from("classes")
-          .select("id", { count: "exact", head: true })
-          .eq("school_id", schoolId!),
-        supabase
-          .from("students")
-          .select("id", { count: "exact", head: true })
-          .eq("school_id", schoolId!),
-        supabase
-          .from("simulados")
-          .select("id, title, status, time_limit_minutes")
-          .eq("school_id", schoolId!)
-          .order("created_at", { ascending: false })
-          .limit(5),
-        supabase
-          .from("simulado_attempts")
-          .select("id, started_at, submitted_at, total_score, max_score")
-          .eq("school_id", schoolId!)
-          .order("started_at", { ascending: false })
-          .limit(8),
-        supabase
-          .from("simulado_attempts")
-          .select("id", { count: "exact", head: true })
-          .eq("school_id", schoolId!)
-          .gte("started_at", since),
-      ]);
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      const [school, teachers, classes, students, simulados, recent, attempts, simuladosMonth] =
+        await Promise.all([
+          supabase
+            .from("schools")
+            .select(
+              "name, slug, city, state, plan_id, plans(name, max_teachers, max_students, max_simulados_month)",
+            )
+            .eq("id", schoolId!)
+            .maybeSingle(),
+          supabase
+            .from("teachers")
+            .select("id", { count: "exact", head: true })
+            .eq("school_id", schoolId!),
+          supabase
+            .from("classes")
+            .select("id", { count: "exact", head: true })
+            .eq("school_id", schoolId!),
+          supabase
+            .from("students")
+            .select("id", { count: "exact", head: true })
+            .eq("school_id", schoolId!),
+          supabase
+            .from("simulados")
+            .select("id, title, status, time_limit_minutes")
+            .eq("school_id", schoolId!)
+            .order("created_at", { ascending: false })
+            .limit(5),
+          supabase
+            .from("simulado_attempts")
+            .select("id, started_at, submitted_at, total_score, max_score")
+            .eq("school_id", schoolId!)
+            .order("started_at", { ascending: false })
+            .limit(8),
+          supabase
+            .from("simulado_attempts")
+            .select("id", { count: "exact", head: true })
+            .eq("school_id", schoolId!)
+            .gte("started_at", since),
+          supabase
+            .from("simulados")
+            .select("id", { count: "exact", head: true })
+            .eq("school_id", schoolId!)
+            .gte("created_at", monthStart.toISOString()),
+        ]);
       return {
         school: school.data,
         teachers: teachers.count ?? 0,
@@ -84,6 +97,7 @@ function SchoolOverview() {
         simulados: simulados.data ?? [],
         recent: recent.data ?? [],
         attempts30d: attempts.count ?? 0,
+        simuladosMonth: simuladosMonth.count ?? 0,
       };
     },
   });
@@ -158,6 +172,51 @@ function SchoolOverview() {
           </Link>
         ))}
       </div>
+
+      {data?.school?.plans && (
+        <Card className="shadow-soft">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Package className="size-5 text-primary" /> Plano e limites
+            </CardTitle>
+            <Badge variant="outline">{data.school.plans.name}</Badge>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {[
+              { label: "Professores", used: data.teachers, max: data.school.plans.max_teachers },
+              { label: "Alunos", used: data.students, max: data.school.plans.max_students },
+              {
+                label: "Simulados neste mês",
+                used: data.simuladosMonth,
+                max: data.school.plans.max_simulados_month,
+              },
+            ].map((row) => {
+              const pct = row.max ? Math.min(100, Math.round((row.used / row.max) * 100)) : 0;
+              const over = row.max > 0 && row.used >= row.max;
+              return (
+                <div key={row.label} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">{row.label}</span>
+                    <span className={cn("font-medium tabular-nums", over && "text-destructive")}>
+                      {row.used}
+                      {row.max > 0 ? ` / ${row.max}` : ""}
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-accent">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all",
+                        over ? "bg-destructive" : "bg-primary",
+                      )}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="shadow-soft">
         <CardHeader>

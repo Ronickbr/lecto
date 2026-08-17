@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { createSimuladoFn } from "@/lib/simulados.functions";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,7 +45,7 @@ import {
   Layers,
   ListChecks,
 } from "lucide-react";
-import { toast } from "sonner";
+import { showError, toast } from "@/lib/errors/feedback";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/school/simulados/")({
@@ -120,7 +122,7 @@ function SimuladosPage() {
       toast.success("Simulado excluído");
       qc.invalidateQueries({ queryKey: ["simulados"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => showError(e),
   });
 
   const filtered = useMemo(() => {
@@ -327,6 +329,7 @@ function SimuladosPage() {
 
 function CreateSimuladoDialog({ schoolId, onClose }: { schoolId: string; onClose: () => void }) {
   const qc = useQueryClient();
+  const createSimulado = useServerFn(createSimuladoFn);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -342,22 +345,22 @@ function CreateSimuladoDialog({ schoolId, onClose }: { schoolId: string; onClose
   });
 
   const mut = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("simulados").insert({
-        school_id: schoolId,
-        title: form.title,
-        description: form.description || null,
-        class_id: form.class_id || null,
-        time_limit_minutes: form.time_limit_minutes,
-      });
-      if (error) throw error;
-    },
+    mutationFn: async () =>
+      createSimulado({
+        data: {
+          schoolId,
+          title: form.title,
+          description: form.description || null,
+          classId: form.class_id || null,
+          timeLimitMinutes: form.time_limit_minutes,
+        },
+      }),
     onSuccess: () => {
       toast.success("Simulado criado");
       qc.invalidateQueries({ queryKey: ["simulados"] });
       onClose();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => showError(e),
   });
 
   return (

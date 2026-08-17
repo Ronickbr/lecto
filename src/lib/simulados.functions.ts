@@ -5,7 +5,11 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { createAiProvider, getAiModel } from "./ai-gateway.server";
-import { assertCanManageSchool, resolveSchoolIdForGeneration } from "./manage.server";
+import {
+  assertCanManageSchool,
+  resolveOperationalSchool,
+  resolveSchoolIdForGeneration,
+} from "./manage.server";
 import {
   PIRLS_PROCESSES,
   GeneratedPayload,
@@ -187,6 +191,50 @@ export const saveGeneratedPageFn = createServerFn({ method: "POST" })
     }
 
     return persistGeneratedPayload(context, schoolId, data.payload, data.simuladoId);
+  });
+
+/** Cria um novo simulado respeitando o limite mensal do plano (max_simulados_month). */
+export const createSimuladoFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: unknown) =>
+    z
+      .object({
+        schoolId: z.string().uuid(),
+        title: z.string().trim().min(1).max(200),
+        description: z.string().max(500).nullable().optional(),
+        classId: z.string().uuid().nullable().optional(),
+        timeLimitMinutes: z.number().int().min(5).max(600).default(60),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { assertResourceLimit } = await import("./plan-limits.server");
+
+    const schoolId = await resolveOperationalSchool(
+      context.supabase,
+      supabaseAdmin,
+      context.userId,
+      data.schoolId,
+    );
+    await assertCanManageSchool(context.supabase, context.userId, schoolId);
+    await assertResourceLimit(supabaseAdmin, schoolId, "simulados_month");
+
+    const { data: created, error } = await supabaseAdmin
+      .from("simulados")
+      .insert({
+        school_id: schoolId,
+        title: data.title,
+        description: data.description ?? null,
+        class_id: data.classId ?? null,
+        time_limit_minutes: data.timeLimitMinutes,
+        created_by: context.userId,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+
+    return { id: created.id };
   });
 
 /**

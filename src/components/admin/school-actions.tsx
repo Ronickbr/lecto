@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { updateSchoolPlanFn } from "@/lib/staff.functions";
+import { showError, toast } from "@/lib/errors/feedback";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -62,9 +64,11 @@ export function SchoolActions({
 }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const updatePlan = useServerFn(updateSchoolPlanFn);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
   const [planId, setPlanId] = useState(school.plan_id ?? "");
+  const [savingPlan, setSavingPlan] = useState(false);
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["admin-schools-full"] });
@@ -76,31 +80,51 @@ export function SchoolActions({
       .from("schools")
       .update({ subscription_status: status })
       .eq("id", school.id);
-    if (error) return toast.error(error.message);
+    if (error) return showError(error);
     toast.success(status === "active" ? "Escola reativada" : "Escola suspensa");
     refresh();
   }
 
   async function changePlan() {
-    const { error } = await supabase
-      .from("schools")
-      .update({ plan_id: planId || null })
-      .eq("id", school.id);
-    if (error) return toast.error(error.message);
-    toast.success("Plano atualizado");
-    setPlanOpen(false);
-    refresh();
+    setSavingPlan(true);
+    try {
+      await updatePlan({ data: { schoolId: school.id, planId: planId || null } });
+      toast.success("Plano atualizado");
+      setPlanOpen(false);
+      refresh();
+    } catch (e) {
+      showError(e, { fallback: "Falha ao trocar plano" });
+    } finally {
+      setSavingPlan(false);
+    }
   }
 
   async function remove() {
     const { error } = await supabase.from("schools").delete().eq("id", school.id);
-    if (error) return toast.error(error.message);
+    if (error) return showError(error);
     toast.success("Escola excluída");
     setConfirmDelete(false);
     refresh();
   }
 
   async function duplicate() {
+    if (school.plan_id) {
+      const { count } = await supabase
+        .from("schools")
+        .select("id", { count: "exact", head: true })
+        .eq("plan_id", school.plan_id)
+        .in("subscription_status", ["trial", "active"]);
+      const { data: plan } = await supabase
+        .from("plans")
+        .select("name, max_schools")
+        .eq("id", school.plan_id)
+        .maybeSingle();
+      if (plan && (count ?? 0) >= plan.max_schools) {
+        return showError(
+          `O plano ${plan.name} já atingiu o limite de ${plan.max_schools} escola(s).`,
+        );
+      }
+    }
     const { error } = await supabase.from("schools").insert({
       name: `${school.name} (cópia)`,
       slug: `${school.slug}-copia-${Math.random().toString(36).slice(2, 6)}`,
@@ -108,17 +132,17 @@ export function SchoolActions({
       state: school.state,
       plan_id: school.plan_id,
     });
-    if (error) return toast.error(error.message);
+    if (error) return showError(error);
     toast.success("Escola duplicada");
     refresh();
   }
 
   async function resetPassword() {
-    if (!school.ownerEmail) return toast.error("Escola sem responsável com e-mail cadastrado");
+    if (!school.ownerEmail) return showError("Escola sem responsável com e-mail cadastrado");
     const { error } = await supabase.auth.resetPasswordForEmail(school.ownerEmail, {
       redirectTo: `${window.location.origin}/auth`,
     });
-    if (error) return toast.error(error.message);
+    if (error) return showError(error);
     toast.success(`Link de redefinição enviado para ${school.ownerEmail}`);
   }
 
@@ -221,8 +245,8 @@ export function SchoolActions({
             </Select>
           </div>
           <DialogFooter>
-            <Button className="rounded-xl" onClick={changePlan}>
-              Salvar
+            <Button className="rounded-xl" onClick={changePlan} disabled={savingPlan}>
+              {savingPlan ? "Salvando…" : "Salvar"}
             </Button>
           </DialogFooter>
         </DialogContent>

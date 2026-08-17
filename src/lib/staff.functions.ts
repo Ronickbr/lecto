@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { CreateSchoolSchema, CreateTeacherSchema } from "./staff.schemas.server";
+import { z } from "zod";
 
 // ============================================================
 // Super admin creates a school AND a school_admin user for it
@@ -16,6 +17,9 @@ export const createSchoolFn = createServerFn({ method: "POST" })
     if (!isSuper) throw new Error("Apenas o administrador geral pode criar escolas");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { assertPlanSchoolCapacity } = await import("./plan-limits.server");
+
+    if (data.planId) await assertPlanSchoolCapacity(supabaseAdmin, data.planId);
 
     // Create school
     const { data: school, error: sErr } = await supabaseAdmin
@@ -89,6 +93,8 @@ export const createTeacherFn = createServerFn({ method: "POST" })
     if (!allowed) throw new Error("Sem permissão");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { assertResourceLimit } = await import("./plan-limits.server");
+    await assertResourceLimit(supabaseAdmin, data.schoolId, "teachers");
 
     let userId: string | null = null;
     const { data: existing } = await supabaseAdmin.auth.admin.listUsers();
@@ -126,4 +132,48 @@ export const createTeacherFn = createServerFn({ method: "POST" })
     });
 
     return { teacherId: teacher.id };
+  });
+
+// ============================================================
+// Super admin troca o plano de uma escola (respeita limites)
+// ============================================================
+
+export const updateSchoolPlanFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((raw: unknown) =>
+    z
+      .object({
+        schoolId: z.string().uuid(),
+        planId: z.string().uuid().nullable(),
+      })
+      .parse(raw),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: isSuper } = await context.supabase.rpc("is_super_admin", {
+      _user_id: context.userId,
+    });
+    if (!isSuper) throw new Error("Apenas o administrador geral pode alterar o plano");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { assertPlanFitsUsage, assertPlanSchoolCapacity } = await import("./plan-limits.server");
+
+    const { data: school } = await supabaseAdmin
+      .from("schools")
+      .select("id, plan_id")
+      .eq("id", data.schoolId)
+      .maybeSingle();
+    if (!school) throw new Error("Escola não encontrada");
+
+    if (data.planId && data.planId !== school.plan_id) {
+      await assertPlanSchoolCapacity(supabaseAdmin, data.planId);
+      await assertPlanFitsUsage(supabaseAdmin, school.id, data.planId);
+    }
+
+    const { error } = await supabaseAdmin
+      .from("schools")
+      .update({ plan_id: data.planId })
+      .eq("id", school.id);
+    if (error) throw new Error(error.message);
+
+    return { ok: true };
   });

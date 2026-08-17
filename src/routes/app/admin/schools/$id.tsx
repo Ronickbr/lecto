@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { updateSchoolPlanFn } from "@/lib/staff.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, LogIn, Save } from "lucide-react";
-import { toast } from "sonner";
+import { showError, toast } from "@/lib/errors/feedback";
 import { HealthBadge, PlanBadge, StatusBadge } from "@/components/admin/badges";
 import { StatCard, ChartCard } from "@/components/admin/stat-card";
 import { MetricBars } from "@/components/charts";
@@ -47,6 +49,7 @@ function SchoolDetail() {
   const { tab } = Route.useSearch();
   const navigate = Route.useNavigate();
   const qc = useQueryClient();
+  const updatePlan = useServerFn(updateSchoolPlanFn);
   const { data: schools, isLoading } = useAdminSchools();
   const school = (schools ?? []).find((s) => s.id === id);
 
@@ -116,21 +119,29 @@ function SchoolDetail() {
   }, [detail]);
 
   async function save() {
+    if (form.plan_id !== undefined && form.plan_id !== school?.plan_id) {
+      try {
+        await updatePlan({ data: { schoolId: id, planId: form.plan_id || null } });
+      } catch (e) {
+        return showError(e, { fallback: "Falha ao trocar plano" });
+      }
+    }
+
     const { error } = await supabase
       .from("schools")
       .update({
         ...(form.name !== undefined ? { name: form.name } : {}),
         ...(form.city !== undefined ? { city: form.city } : {}),
         ...(form.state !== undefined ? { state: form.state } : {}),
-        ...(form.plan_id !== undefined ? { plan_id: form.plan_id } : {}),
         ...(form.subscription_status !== undefined
           ? { subscription_status: form.subscription_status as "active" }
           : {}),
       })
       .eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) return showError(error);
     toast.success("Alterações salvas");
     qc.invalidateQueries({ queryKey: ["admin-schools-full"] });
+    qc.invalidateQueries({ queryKey: ["admin-schools"] });
   }
 
   if (isLoading) return <Skeleton className="h-72 w-full rounded-2xl" />;

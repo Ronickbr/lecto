@@ -99,6 +99,8 @@ export const createStudentFn = createServerFn({ method: "POST" })
     await assertCanManageStudent(context.supabase, context.userId, data.schoolId, [data.classId]);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { assertResourceLimit } = await import("./plan-limits.server");
+    await assertResourceLimit(supabaseAdmin, data.schoolId, "students");
 
     const { data: school } = await supabaseAdmin
       .from("schools")
