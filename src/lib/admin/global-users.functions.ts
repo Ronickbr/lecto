@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export interface GlobalUserRow {
@@ -108,4 +109,34 @@ export const listGlobalUsersFn = createServerFn({ method: "GET" })
       }));
 
     return [...staff, ...studentRows] as GlobalUserRow[];
+  });
+
+/**
+ * Deleta um usuário da plataforma (auth.users + dados relacionados via cascade).
+ * Apenas super_admin pode executar. Bloqueia auto-deleção.
+ */
+export const deleteGlobalUserFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(z.object({ targetUserId: z.string().uuid() }))
+  .handler(async ({ data, context }) => {
+    const { data: isSuper } = await context.supabase.rpc("is_super_admin", {
+      _user_id: context.userId,
+    });
+    if (!isSuper) throw new Error("Apenas o administrador geral pode deletar usuários");
+    if (data.targetUserId === context.userId)
+      throw new Error("Você não pode deletar sua própria conta");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Remove da tabela students (alunos sem auth user usam id direto)
+    await supabaseAdmin.from("students").delete().eq("user_id", data.targetUserId);
+    // Remove roles, profiles, teachers — cascade via FK fará o resto
+    await supabaseAdmin.from("user_roles").delete().eq("user_id", data.targetUserId);
+    await supabaseAdmin.from("teachers").delete().eq("user_id", data.targetUserId);
+    await supabaseAdmin.from("profiles").delete().eq("id", data.targetUserId);
+    // Deleta o usuário do Auth (operação final e irreversível)
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(data.targetUserId);
+    if (error) throw new Error(`Falha ao deletar usuário: ${error.message}`);
+
+    return { ok: true };
   });
