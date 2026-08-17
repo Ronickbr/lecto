@@ -54,9 +54,9 @@ Você receberá um acuso de recebimento em até 48h e uma avaliação inicial em
 
 ## Supported Versions
 
-| Versão | Suporte           |
-| ------ | ----------------- |
-| main   | Correções ativas  |
+| Versão | Suporte          |
+| ------ | ---------------- |
+| main   | Correções ativas |
 
 ## Dependency Management
 

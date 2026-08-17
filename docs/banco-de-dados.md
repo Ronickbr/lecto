@@ -6,39 +6,39 @@ Documentação do schema, RLS (Row Level Security) e migrations do Supabase.
 
 O banco é PostgreSQL (via Supabase) com **multi-tenancy por escola**. As principais entidades:
 
-| Entidade | Tabela | Descrição |
-| :--- | :--- | :--- |
-| Perfis | `profiles` | Perfil público do usuário (criado automaticamente no signup). |
-| Escolas | `schools` | Instituições / redes de ensino. |
-| Planos | `plans` | Planos de assinatura e limites. |
-| Assinaturas | `subscriptions` | Vínculo escola-plano com status. |
-| Papéis | `user_roles` | `super_admin`, `school_admin`, `teacher`, `student` por escola. |
-| Turmas | `classes` | Turmas vinculadas a uma escola. |
-| Professores | `teachers` | Dados de professores por escola. |
-| Alunos | `students` | Dados de alunos por escola e turma. |
-| Credenciais de aluno | `student_credentials` | Hash do PIN (bcrypt) + e-mail do aluno. |
-| Textos | `texts` | Material de leitura (PIRLS). |
-| Questões | `questions` | Questões com processo PIRLS. |
-| Gabaritos | `question_keys` | Gabaritos/rubricas restritos a editores. |
-| Simulados | `simulados`, `simulado_pages`, `simulado_blocks` | Estrutura de provas. |
-| Tentativas | `simulado_attempts` | Sessões de aluno (com `submitted_at`). |
-| Respostas | `simulado_answers` | Respostas e correção. |
-| Reaplicações | `simulado_retakes` | Controle de retakes. |
-| Logs | `logs` | Trilha de auditoria. |
-| Config. plataforma | `platform_settings` | Configurações globais do super admin. |
-| Webhooks | `webhook_events` | Ledger de idempotência de webhooks de pagamento. |
+| Entidade             | Tabela                                           | Descrição                                                       |
+| :------------------- | :----------------------------------------------- | :-------------------------------------------------------------- |
+| Perfis               | `profiles`                                       | Perfil público do usuário (criado automaticamente no signup).   |
+| Escolas              | `schools`                                        | Instituições / redes de ensino.                                 |
+| Planos               | `plans`                                          | Planos de assinatura e limites.                                 |
+| Assinaturas          | `subscriptions`                                  | Vínculo escola-plano com status.                                |
+| Papéis               | `user_roles`                                     | `super_admin`, `school_admin`, `teacher`, `student` por escola. |
+| Turmas               | `classes`                                        | Turmas vinculadas a uma escola.                                 |
+| Professores          | `teachers`                                       | Dados de professores por escola.                                |
+| Alunos               | `students`                                       | Dados de alunos por escola e turma.                             |
+| Credenciais de aluno | `student_credentials`                            | Hash do PIN (bcrypt) + e-mail do aluno.                         |
+| Textos               | `texts`                                          | Material de leitura (PIRLS).                                    |
+| Questões             | `questions`                                      | Questões com processo PIRLS.                                    |
+| Gabaritos            | `question_keys`                                  | Gabaritos/rubricas restritos a editores.                        |
+| Simulados            | `simulados`, `simulado_pages`, `simulado_blocks` | Estrutura de provas.                                            |
+| Tentativas           | `simulado_attempts`                              | Sessões de aluno (com `submitted_at`).                          |
+| Respostas            | `simulado_answers`                               | Respostas e correção.                                           |
+| Reaplicações         | `simulado_retakes`                               | Controle de retakes.                                            |
+| Logs                 | `logs`                                           | Trilha de auditoria.                                            |
+| Config. plataforma   | `platform_settings`                              | Configurações globais do super admin.                           |
+| Webhooks             | `webhook_events`                                 | Ledger de idempotência de webhooks de pagamento.                |
 
 ## Row Level Security (RLS)
 
 Todas as tabelas têm RLS habilitado. As funções auxiliares definem o isolamento:
 
-| Função | Uso |
-| :--- | :--- |
-| `public.has_role(uid, role)` | Verifica se o usuário tem um papel. |
-| `public.user_school_id(uid)` | Escola do usuário (fail-closed se estiver em mais de uma). |
-| `public.is_super_admin(uid)` | Papel global de super admin. |
-| `public.is_school_editor(uid, school_id)` | `school_admin` ou `teacher` da escola. |
-| `public.is_attempt_staff(school_id)` | Staff com acesso de correção. |
+| Função                                    | Uso                                                        |
+| :---------------------------------------- | :--------------------------------------------------------- |
+| `public.has_role(uid, role)`              | Verifica se o usuário tem um papel.                        |
+| `public.user_school_id(uid)`              | Escola do usuário (fail-closed se estiver em mais de uma). |
+| `public.is_super_admin(uid)`              | Papel global de super admin.                               |
+| `public.is_school_editor(uid, school_id)` | `school_admin` ou `teacher` da escola.                     |
+| `public.is_attempt_staff(school_id)`      | Staff com acesso de correção.                              |
 
 ### Regras principais
 

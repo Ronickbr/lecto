@@ -7,7 +7,7 @@
 [![Playwright](https://img.shields.io/badge/Playwright-E2E-2e6495.svg)](https://playwright.dev/)
 [![Vercel](https://img.shields.io/badge/Vercel-Deploy-000000.svg)](https://vercel.com)
 
-O **Lecto** é uma plataforma edtech SaaS de avaliação e desenvolvimento de compreensão leitora para escolas e redes de ensino. Alinhada à metodologia internacional **PIRLS** (*Progress in International Reading Literacy Study*), a plataforma permite aplicar simulados, obter diagnósticos contínuos por IA e analisar o desempenho em leitura.
+O **Lecto** é uma plataforma edtech SaaS de avaliação e desenvolvimento de compreensão leitora para escolas e redes de ensino. Alinhada à metodologia internacional **PIRLS** (_Progress in International Reading Literacy Study_), a plataforma permite aplicar simulados, obter diagnósticos contínuos por IA e analisar o desempenho em leitura.
 
 ---
 

@@ -80,7 +80,7 @@ Exemplo: `fix: aplica rate limit no login por PIN do aluno`.
   bun run format
   ```
 
-- **Não adicione comentários desnecessários**; o código deve ser autoexplicativo. Comentários são aceitos quando explicam *por quê*, não *o quê*.
+- **Não adicione comentários desnecessários**; o código deve ser autoexplicativo. Comentários são aceitos quando explicam _por quê_, não _o quê_.
 
 ## Segurança
 
