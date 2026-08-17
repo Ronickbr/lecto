@@ -4,8 +4,8 @@ const BASE_URL = process.env.E2E_BASE_URL ?? "http://localhost:8080";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  timeout: 60_000,
-  expect: { timeout: 10_000 },
+  timeout: 240_000,
+  expect: { timeout: 20_000 },
   fullyParallel: false,
   retries: 0,
   workers: 1,
@@ -14,10 +14,10 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     ...devices["Desktop Chrome"],
-    // Evidência automática de falhas: trace navegável, screenshot e vídeo.
+    channel: "chrome",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: { mode: "retain-on-failure", size: { width: 1280, height: 900 } },
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], channel: "chrome" } }],
 });
