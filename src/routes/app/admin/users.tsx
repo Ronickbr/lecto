@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -20,11 +22,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { PageHeader, StatCard } from "@/components/admin/stat-card";
 import { useAdminSchools } from "@/lib/admin/queries";
-import { listGlobalUsersFn } from "@/lib/admin/global-users.functions";
+import {
+  listGlobalUsersFn,
+  deleteGlobalUserFn,
+  type GlobalUserRow,
+} from "@/lib/admin/global-users.functions";
 import { shortDate, num } from "@/lib/admin/format";
-import { Search } from "lucide-react";
+import { showError, toast } from "@/lib/errors/feedback";
+import { Search, Trash2, Loader2, AlertTriangle } from "lucide-react";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/app/admin/users")({
   head: () => ({ meta: [{ title: "Usuários globais — Super Admin | Lecto" }] }),
@@ -38,11 +54,29 @@ const ROLE_LABEL: Record<string, string> = {
   student: "Aluno",
 };
 
+type UserRow = {
+  key: string;
+  userId: string;
+  name: string;
+  email: string;
+  role: string;
+  school: string;
+  created_at: string;
+};
+
 function UsersPage() {
   const { data: schools } = useAdminSchools();
+  const { data: currentUser } = useCurrentUser();
+  const currentUserId = currentUser?.userId;
+
   const [q, setQ] = useState("");
   const [role, setRole] = useState("all");
+  const [toDelete, setToDelete] = useState<UserRow | null>(null);
+  const [confirmEmail, setConfirmEmail] = useState("");
+
   const listGlobalUsers = useServerFn(listGlobalUsersFn);
+  const deleteGlobalUser = useServerFn(deleteGlobalUserFn);
+  const qc = useQueryClient();
 
   const { data } = useQuery({
     queryKey: ["admin-global-users"],
@@ -51,10 +85,11 @@ function UsersPage() {
 
   const schoolName = useMemo(() => new Map((schools ?? []).map((s) => [s.id, s.name])), [schools]);
 
-  const users = useMemo(() => {
+  const users = useMemo<UserRow[]>(() => {
     if (!data) return [];
-    return data.map((u) => ({
+    return data.map((u: GlobalUserRow) => ({
       key: `${u.userId}-${u.role}`,
+      userId: u.userId,
       name: u.name ?? "—",
       email: u.email ?? "—",
       role: u.role,
@@ -74,6 +109,35 @@ function UsersPage() {
     users.forEach((u) => (c[u.role] = (c[u.role] ?? 0) + 1));
     return c;
   }, [users]);
+
+  const deleteMutation = useMutation({
+    mutationFn: (targetUserId: string) => deleteGlobalUser({ data: { targetUserId } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-global-users"] });
+      toast.success("Usuário deletado com sucesso.");
+      setToDelete(null);
+      setConfirmEmail("");
+    },
+    onError: (err: Error) => {
+      showError(err);
+    },
+  });
+
+  function openDeleteDialog(u: UserRow) {
+    setConfirmEmail("");
+    setToDelete(u);
+  }
+
+  function handleConfirmDelete() {
+    if (!toDelete) return;
+    if (confirmEmail.trim().toLowerCase() !== toDelete.email.toLowerCase()) {
+      showError("O e-mail digitado não confere. Tente novamente.");
+      return;
+    }
+    deleteMutation.mutate(toDelete.userId);
+  }
+
+  const canDelete = (u: UserRow) => u.userId !== currentUserId && u.role !== "super_admin";
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -115,7 +179,7 @@ function UsersPage() {
 
       <Card className="overflow-hidden rounded-2xl border-border/70 shadow-soft">
         <div className="overflow-x-auto">
-          <Table className="min-w-[720px]">
+          <Table className="min-w-[800px]">
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
                 <TableHead>Nome</TableHead>
@@ -123,6 +187,7 @@ function UsersPage() {
                 <TableHead>Papel</TableHead>
                 <TableHead>Escola</TableHead>
                 <TableHead>Desde</TableHead>
+                <TableHead className="w-16 text-center">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -137,11 +202,27 @@ function UsersPage() {
                   </TableCell>
                   <TableCell className="text-muted-foreground">{u.school}</TableCell>
                   <TableCell className="text-muted-foreground">{shortDate(u.created_at)}</TableCell>
+                  <TableCell className="text-center">
+                    {canDelete(u) ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-muted-foreground hover:text-destructive"
+                        title="Deletar usuário"
+                        data-e2e="delete-user-btn"
+                        onClick={() => openDeleteDialog(u)}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground/40">—</span>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
               {list.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="py-12 text-center text-muted-foreground">
                     Nenhum usuário encontrado.
                   </TableCell>
                 </TableRow>
@@ -158,6 +239,84 @@ function UsersPage() {
         </Link>
         .
       </p>
+
+      {/* Modal de confirmação de exclusão */}
+      <Dialog
+        open={!!toDelete}
+        onOpenChange={(open) => {
+          if (!open) {
+            setToDelete(null);
+            setConfirmEmail("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="size-5" />
+              Deletar usuário
+            </DialogTitle>
+            <DialogDescription>
+              Esta ação é <strong>irreversível</strong>. O usuário perderá acesso imediatamente e
+              todos os seus dados serão removidos da plataforma.
+            </DialogDescription>
+          </DialogHeader>
+
+          {toDelete && (
+            <div className="space-y-4 pt-1">
+              <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm">
+                <p className="font-medium">{toDelete.name}</p>
+                <p className="text-muted-foreground">{toDelete.email}</p>
+                <p className="mt-1 text-muted-foreground">
+                  Papel:{" "}
+                  <span className="font-medium text-foreground">
+                    {ROLE_LABEL[toDelete.role] ?? toDelete.role}
+                  </span>{" "}
+                  · Escola: <span className="font-medium text-foreground">{toDelete.school}</span>
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="confirm-email">Digite o e-mail do usuário para confirmar:</Label>
+                <Input
+                  id="confirm-email"
+                  placeholder={toDelete.email}
+                  value={confirmEmail}
+                  onChange={(e) => setConfirmEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleConfirmDelete()}
+                  autoComplete="off"
+                  data-e2e="confirm-delete-email-input"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 pt-2">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setToDelete(null);
+                setConfirmEmail("");
+              }}
+              disabled={deleteMutation.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={
+                deleteMutation.isPending ||
+                confirmEmail.trim().toLowerCase() !== (toDelete?.email ?? "").toLowerCase()
+              }
+              data-e2e="confirm-delete-submit"
+            >
+              {deleteMutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Deletar permanentemente
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
