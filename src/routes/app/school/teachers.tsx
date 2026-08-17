@@ -51,7 +51,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Plus, MoreHorizontal, Pencil, KeyRound, Trash2, Search, Download } from "lucide-react";
-import { toast } from "sonner";
+import { showError, toast } from "@/lib/errors/feedback";
 
 export const Route = createFileRoute("/app/school/teachers")({
   head: () => ({
@@ -134,7 +134,7 @@ function TeachersPage() {
       refresh();
       return true;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha na operação");
+      showError(e, { fallback: "Falha na operação" });
       return false;
     } finally {
       setBusy(false);

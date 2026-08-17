@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpenText } from "lucide-react";
-import { toast } from "sonner";
+import { showError, toast } from "@/lib/errors/feedback";
 
 export const Route = createFileRoute("/auth/student")({
   head: () => ({
@@ -50,7 +50,7 @@ function StudentAuth() {
       toast.success(`Olá, ${res.fullName}!`);
       navigate({ to: "/app" });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha no login");
+      showError(err, { fallback: "Falha no login" });
     } finally {
       setLoading(false);
     }

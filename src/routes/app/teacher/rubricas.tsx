@@ -18,7 +18,7 @@ import {
 import { Loader2, Save, Sparkles, Search, Wand2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { generateRubricFn, generateMissingRubricsFn } from "@/lib/rubrics.functions";
-import { toast } from "sonner";
+import { showError, toast } from "@/lib/errors/feedback";
 import { PROCESS_LABEL } from "@/lib/pirls";
 
 export const Route = createFileRoute("/app/teacher/rubricas")({
@@ -61,7 +61,7 @@ function RubricsPage() {
       });
       qc.invalidateQueries({ queryKey: ["rubric-questions"] });
     },
-    onError: () => toast.error("Não foi possível gerar a rubrica"),
+    onError: () => showError("Não foi possível gerar a rubrica"),
     onSettled: () => setGenId(null),
   });
 
@@ -72,7 +72,7 @@ function RubricsPage() {
       toast.success(`${res.generated} rubrica(s) gerada(s) pela IA`);
       qc.invalidateQueries({ queryKey: ["rubric-questions"] });
     },
-    onError: () => toast.error("Não foi possível gerar as rubricas pendentes"),
+    onError: () => showError("Não foi possível gerar as rubricas pendentes"),
   });
 
   const { data: questions, isLoading } = useQuery({
@@ -113,7 +113,7 @@ function RubricsPage() {
       });
       qc.invalidateQueries({ queryKey: ["rubric-questions"] });
     },
-    onError: () => toast.error("Não foi possível salvar a rubrica"),
+    onError: () => showError("Não foi possível salvar a rubrica"),
   });
 
   const filtered = useMemo(() => {

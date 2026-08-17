@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { Loader2 } from "lucide-react";
+import { ErrorState } from "@/lib/errors/feedback";
 
 export const Route = createFileRoute("/app/")({
   component: RoleRedirect,
@@ -23,21 +24,13 @@ function RoleRedirect() {
   const noRole = !isLoading && !isFetching && !isError && data !== null && !data?.primaryRole;
 
   return (
-    <div className="grid min-h-[50vh] place-items-center text-center text-muted-foreground">
+    <div className="mx-auto grid min-h-[50vh] max-w-md place-items-center px-4">
       {noRole ? (
-        "Sem papel atribuído. Contate o suporte."
+        <p className="text-center text-muted-foreground">Sem papel atribuído. Contate o suporte.</p>
       ) : isError ? (
-        <div className="flex flex-col items-center gap-3">
-          <p>Não foi possível carregar seu perfil.</p>
-          <button
-            onClick={() => refetch()}
-            className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground transition hover:opacity-90"
-          >
-            Tentar novamente
-          </button>
-        </div>
+        <ErrorState error={error} retry={() => refetch()} className="w-full" />
       ) : (
-        <Loader2 className="size-6 animate-spin" />
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
       )}
     </div>
   );

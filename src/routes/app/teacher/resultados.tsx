@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, Sparkles, BarChart3 } from "lucide-react";
-import { toast } from "sonner";
+import { showError, toast } from "@/lib/errors/feedback";
 import { PROCESS_LABEL } from "@/lib/pirls";
 import { ProcessRadar, ScoreBars } from "@/components/charts";
 
@@ -73,7 +73,7 @@ function TeacherResults() {
       toast.success("Correção concluída");
       qc.invalidateQueries({ queryKey: ["results-attempts"] });
     },
-    onError: () => toast.error("Não foi possível corrigir agora"),
+    onError: () => showError("Não foi possível corrigir agora"),
   });
 
   const graded = useMemo(() => (attempts ?? []).filter((a) => a.graded_at), [attempts]);

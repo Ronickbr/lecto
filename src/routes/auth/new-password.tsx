@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input } from "@/components/ui";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { ErrorState, showError, toUserError, toast } from "@/lib/errors/feedback";
 
 const NewPasswordPage = () => {
   const [loading, setLoading] = useState(false);
@@ -39,9 +39,9 @@ const NewPasswordPage = () => {
       toast.success("Senha redefinida com sucesso! Faça login agora.");
       window.location.href = "/auth";
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao redefinir senha";
-      toast.error(message);
-      setError(message);
+      const userError = toUserError(err, { fallback: "Erro ao redefinir senha" });
+      setError(userError.message);
+      showError(userError);
     } finally {
       setLoading(false);
     }
@@ -54,7 +54,7 @@ const NewPasswordPage = () => {
           <CardTitle className="text-center text-2xl font-bold">Redefinir Senha</CardTitle>
         </CardHeader>
         <CardContent>
-          {error && <p className="mb-4 text-red-600">{error}</p>}
+          {error && <ErrorState error={error} className="mb-4" />}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="new-password" className="mb-1 block text-sm font-medium">

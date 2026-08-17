@@ -30,7 +30,7 @@ import {
   ChevronRight,
   ListChecks,
 } from "lucide-react";
-import { toast } from "sonner";
+import { showError, toast } from "@/lib/errors/feedback";
 
 export const Route = createFileRoute("/app/student/simulado/$id")({
   head: () => ({ meta: [{ title: "Simulado | Lecto" }] }),
@@ -252,7 +252,7 @@ function SimuladoPlayer() {
         .eq("id", attempt.id);
       if (error) throw error;
     },
-    onError: () => toast.error("Não foi possível enviar o simulado. Tente novamente."),
+    onError: () => showError("Não foi possível enviar o simulado. Tente novamente."),
     onSuccess: () => {
       toast.success("Simulado enviado! Corrigindo suas respostas…");
       qc.invalidateQueries();
@@ -584,7 +584,7 @@ function BlockView({
   const save = useMutation({
     mutationFn: persist,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["sim-answers", attemptId] }),
-    onError: () => toast.error("Não foi possível salvar esta resposta. Tente novamente."),
+    onError: () => showError("Não foi possível salvar esta resposta. Tente novamente."),
   });
 
   // Autosave: grava sozinho enquanto o aluno digita e no envio/fechamento da aba.

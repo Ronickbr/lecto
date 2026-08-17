@@ -3,7 +3,7 @@ import { useNavigate, createFileRoute } from "@tanstack/react-router";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input } from "@/components/ui";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { showError, toast } from "@/lib/errors/feedback";
 
 const RecoveryPage = () => {
   const navigate = useNavigate();
@@ -13,7 +13,7 @@ const RecoveryPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return toast.error("Informe seu email");
+    if (!email) return showError("Informe seu email");
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOtp({ email });
@@ -21,7 +21,7 @@ const RecoveryPage = () => {
       toast.success("Código enviado! Verifique seu email.");
       setSent(true);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao enviar código de recuperação");
+      showError(err, { fallback: "Erro ao enviar código de recuperação" });
     } finally {
       setLoading(false);
     }

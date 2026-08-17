@@ -42,7 +42,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { brl, TIER_LABEL } from "@/lib/admin/format";
-import { toast } from "sonner";
+import { showError, toast } from "@/lib/errors/feedback";
 import {
   Save,
   Search,
@@ -290,14 +290,14 @@ function SuperAdminSettingsPage() {
       qc.invalidateQueries({ queryKey: ["platform-settings-db"] });
     },
     onError: (err: Error) => {
-      toast.error(`Erro ao salvar configurações: ${err.message}`);
+      showError(err);
     },
   });
 
   // Alternar ativo de plano
   async function togglePlan(id: string, active: boolean) {
     const { error } = await supabase.from("plans").update({ active }).eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) return showError(error);
     toast.success(active ? "Plano ativado" : "Plano desativado");
     qc.invalidateQueries({ queryKey: ["settings-plans"] });
   }
@@ -350,7 +350,10 @@ function SuperAdminSettingsPage() {
           if (res.ok) return `Conexão com ${serviceName} válida (HTTP ${res.status}).`;
           return `Falha na conexão com ${serviceName}: ${res.message}`;
         },
-        error: (err: Error) => `Falha ao testar ${serviceName}: ${err.message}`,
+        error: (err: Error) => {
+          showError(err);
+          return undefined;
+        },
       });
       return;
     }
@@ -374,7 +377,10 @@ function SuperAdminSettingsPage() {
             return `Conexão com ${serviceName} válida (HTTP ${res.status}). ${res.message}`;
           return `Falha na conexão com ${serviceName}: ${res?.message ?? "Erro desconhecido"}`;
         },
-        error: (err: Error) => `Falha ao testar ${serviceName}: ${err.message}`,
+        error: (err: Error) => {
+          showError(err);
+          return undefined;
+        },
       });
       return;
     }

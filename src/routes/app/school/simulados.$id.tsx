@@ -60,7 +60,7 @@ import {
   BookOpen,
   HelpCircle,
 } from "lucide-react";
-import { toast } from "sonner";
+import { showError, toast } from "@/lib/errors/feedback";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/school/simulados/$id")({
@@ -149,7 +149,7 @@ function SimuladoEditor() {
       toast.success("Status atualizado");
       qc.invalidateQueries({ queryKey: ["simulado", id] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => showError(e),
   });
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
@@ -733,7 +733,7 @@ function ManualPageContent({
       qc.invalidateQueries({ queryKey: ["texts"] });
       onClose();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => showError(e),
   });
 
   const validQuestions = questions.filter(
@@ -1027,7 +1027,7 @@ function AddBlockDialog({
       qc.invalidateQueries({ queryKey: ["page-blocks", pageId] });
       onClose();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => showError(e),
   });
 
   return (
@@ -1152,12 +1152,12 @@ function AiGenerateContent({
         setPreview(res.preview as GeneratedPreview);
         changeStep("preview");
       } else {
-        toast.error("A IA não retornou um conteúdo válido.");
+        showError("A IA não retornou um conteúdo válido.");
         changeStep("form");
       }
     },
     onError: (e: Error) => {
-      toast.error(e.message);
+      showError(e);
       changeStep("form");
     },
   });
@@ -1173,7 +1173,7 @@ function AiGenerateContent({
       qc.invalidateQueries({ queryKey: ["texts"] });
       onClose();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => showError(e),
   });
 
   const mcCount = preview?.questions.filter((q) => q.q_type === "multiple_choice").length ?? 0;

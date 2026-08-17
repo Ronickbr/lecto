@@ -25,7 +25,7 @@ import {
   CheckCircle2,
   Send,
 } from "lucide-react";
-import { toast } from "sonner";
+import { showError, toast } from "@/lib/errors/feedback";
 
 export const Route = createFileRoute("/app/teacher/tentativas")({
   head: () => ({
@@ -137,7 +137,7 @@ function AttemptsControl() {
       toast.success("Nova tentativa liberada para o aluno");
       qc.invalidateQueries({ queryKey: ["attempts-retakes"] });
     },
-    onError: () => toast.error("Não foi possível liberar a tentativa"),
+    onError: () => showError("Não foi possível liberar a tentativa"),
   });
 
   const revokeMut = useMutation({
@@ -149,7 +149,7 @@ function AttemptsControl() {
       toast.success("Liberação cancelada");
       qc.invalidateQueries({ queryKey: ["attempts-retakes"] });
     },
-    onError: () => toast.error("Não foi possível cancelar a liberação"),
+    onError: () => showError("Não foi possível cancelar a liberação"),
   });
 
   const maxMut = useMutation({
@@ -164,7 +164,7 @@ function AttemptsControl() {
       toast.success("Limite de tentativas atualizado");
       qc.invalidateQueries({ queryKey: ["attempts-simulados"] });
     },
-    onError: () => toast.error("Não foi possível atualizar o limite"),
+    onError: () => showError("Não foi possível atualizar o limite"),
   });
 
   const pendingRetake = (simId: string, studentId: string) =>

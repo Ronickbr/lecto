@@ -19,7 +19,7 @@ import {
 } from "@/components/ui";
 import { PageHeader } from "@/components/admin/stat-card";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { toast } from "sonner";
+import { showError, toast } from "@/lib/errors/feedback";
 import { Camera, KeyRound, Loader2, LogOut, Save, Send } from "lucide-react";
 
 export const Route = createFileRoute("/app/profile")({
@@ -90,15 +90,15 @@ function ProfilePage() {
       .update({ full_name: fullName, phone: phone || null })
       .eq("id", me.userId);
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) return showError(error);
     toast.success("Perfil atualizado");
     qc.invalidateQueries({ queryKey: ["current-user"] });
   }
 
   async function uploadAvatar(file: File) {
     if (!me) return;
-    if (!file.type.startsWith("image/")) return toast.error("Selecione um arquivo de imagem");
-    if (file.size > 2 * 1024 * 1024) return toast.error("A imagem deve ter no máximo 2 MB");
+    if (!file.type.startsWith("image/")) return showError("Selecione um arquivo de imagem");
+    if (file.size > 2 * 1024 * 1024) return showError("A imagem deve ter no máximo 2 MB");
     setUploading(true);
     try {
       const ext = file.name.split(".").pop()?.toLowerCase() || "png";
@@ -115,7 +115,7 @@ function ProfilePage() {
       toast.success("Foto de perfil atualizada");
       qc.invalidateQueries({ queryKey: ["current-user"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha ao enviar imagem");
+      showError(e, { fallback: "Falha ao enviar imagem" });
     } finally {
       setUploading(false);
     }
@@ -123,13 +123,13 @@ function ProfilePage() {
 
   async function changePassword(e: React.FormEvent) {
     e.preventDefault();
-    if (!me?.email) return toast.error("Não foi possível identificar seu e-mail");
+    if (!me?.email) return showError("Não foi possível identificar seu e-mail");
     if (!PASSWORD_RULES.test(newPassword)) {
-      return toast.error(
+      return showError(
         "A senha deve ter pelo menos 6 caracteres, incluindo uma letra maiúscula e um número",
       );
     }
-    if (newPassword !== confirmPassword) return toast.error("As senhas não coincidem");
+    if (newPassword !== confirmPassword) return showError("As senhas não coincidem");
     setPwBusy(true);
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
@@ -139,20 +139,20 @@ function ProfilePage() {
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao alterar senha");
+      showError(err, { fallback: "Erro ao alterar senha" });
     } finally {
       setPwBusy(false);
     }
   }
 
   async function sendRecoveryMail() {
-    if (!me?.email) return toast.error("Não foi possível identificar seu e-mail");
+    if (!me?.email) return showError("Não foi possível identificar seu e-mail");
     setMailBusy(true);
     const { error } = await supabase.auth.resetPasswordForEmail(me.email, {
       redirectTo: `${window.location.origin}/auth/new-password`,
     });
     setMailBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) return showError(error);
     setPwSent(true);
     toast.success("Enviamos um link de redefinição para o seu e-mail");
   }

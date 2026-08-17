@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Search, Download, ArrowUpDown } from "lucide-react";
-import { toast } from "sonner";
+import { showError, toast } from "@/lib/errors/feedback";
 import { PageHeader } from "@/components/admin/stat-card";
 import { HealthBadge, PlanBadge, StatusBadge } from "@/components/admin/badges";
 import { SchoolActions } from "@/components/admin/school-actions";
@@ -114,7 +114,7 @@ function SchoolsPage() {
       .from("schools")
       .update({ subscription_status: next })
       .in("id", selected);
-    if (error) return toast.error(error.message);
+    if (error) return showError(error);
     toast.success(`${selected.length} escola(s) atualizada(s)`);
     setSelected([]);
     qc.invalidateQueries({ queryKey: ["admin-schools-full"] });
@@ -417,7 +417,7 @@ function SchoolsPage() {
                 navigate({ search: {} });
                 qc.invalidateQueries({ queryKey: ["admin-schools-full"] });
               } catch (e) {
-                toast.error(e instanceof Error ? e.message : "Falha ao criar");
+                showError(e, { fallback: "Falha ao criar" });
               }
             }}
           />

@@ -66,7 +66,7 @@ import {
   Download,
   Upload,
 } from "lucide-react";
-import { toast } from "sonner";
+import { showError, toast } from "@/lib/errors/feedback";
 
 export const Route = createFileRoute("/app/school/students")({
   head: () => ({
@@ -199,7 +199,7 @@ function StudentsPage() {
       refresh();
       return true;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha na operação");
+      showError(e, { fallback: "Falha na operação" });
       return false;
     } finally {
       setBusy(false);
@@ -243,7 +243,7 @@ function StudentsPage() {
         return { fullName, studentCode, pin };
       })
       .filter((r) => r.fullName && r.studentCode && r.pin && r.pin.length >= 4);
-    if (!rows.length) return toast.error("Nenhuma linha válida. Use: Nome, Código, PIN");
+    if (!rows.length) return showError("Nenhuma linha válida. Use: Nome, Código, PIN");
 
     setBusy(true);
     try {
@@ -252,13 +252,13 @@ function StudentsPage() {
       })) as { created: number; errors: string[] };
       toast.success(`${res.created} aluno(s) importado(s)`);
       if (res.errors.length)
-        toast.error(`${res.errors.length} falha(s): ${res.errors.slice(0, 3).join("; ")}`);
+        showError(`${res.errors.length} falha(s): ${res.errors.slice(0, 3).join("; ")}`);
       refresh();
       setImportOpen(false);
       setCsv("");
       setImportClass("");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha na importação");
+      showError(err, { fallback: "Falha na importação" });
     } finally {
       setBusy(false);
     }

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookOpenText, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { showError, toast } from "@/lib/errors/feedback";
 
 export const Route = createFileRoute("/auth/")({
   head: () => ({
@@ -38,14 +38,14 @@ function AuthPage() {
   // Sign in
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
-    if (!email || !password) return toast.error("Preencha todos os campos");
+    if (!email || !password) return showError("Preencha todos os campos");
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     setLoading(false);
-    if (error) return toast.error(error.message);
+    if (error) return showError(error);
     toast.success("Login realizado");
     navigate({ to: "/app" });
   }
@@ -53,7 +53,7 @@ function AuthPage() {
   // Sign up
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
-    if (!email || !password || !fullName) return toast.error("Preencha todos os campos");
+    if (!email || !password || !fullName) return showError("Preencha todos os campos");
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email,
@@ -64,7 +64,7 @@ function AuthPage() {
       },
     });
     setLoading(false);
-    if (error) return toast.error(error.message);
+    if (error) return showError(error);
     toast.success("Conta criada — faça login");
   }
 

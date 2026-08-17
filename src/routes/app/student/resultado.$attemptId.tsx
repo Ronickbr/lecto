@@ -8,18 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import {
-  Loader2,
-  ArrowLeft,
-  CheckCircle2,
-  XCircle,
-  Sparkles,
-  AlertTriangle,
-  RefreshCw,
-} from "lucide-react";
+import { Loader2, ArrowLeft, CheckCircle2, XCircle, Sparkles } from "lucide-react";
 import { ProcessRadar } from "@/components/charts";
 import { PROCESS_LABEL } from "@/lib/pirls";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { ErrorState } from "@/lib/errors/feedback";
 
 export const Route = createFileRoute("/app/student/resultado/$attemptId")({
   head: () => ({ meta: [{ title: "Resultado do simulado | Lecto" }] }),
@@ -125,20 +118,9 @@ function ResultPage() {
         <Card className="shadow-soft">
           <CardContent className="p-10">
             {gradeMut.isError ? (
-              // Sem este estado, uma falha da IA deixava o aluno num spinner infinito.
-              <div className="flex flex-col items-center gap-3 text-center">
-                <AlertTriangle className="size-6 text-destructive" />
-                <p className="text-sm text-muted-foreground">
-                  Não foi possível concluir a correção automática. Suas respostas estão salvas.
-                </p>
-                <Button onClick={() => gradeMut.mutate()} disabled={gradeMut.isPending}>
-                  {gradeMut.isPending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="size-4" />
-                  )}
-                  Tentar novamente
-                </Button>
+              <div className="space-y-3">
+                <ErrorState error={gradeMut.error} retry={() => gradeMut.mutate()} />
+                <p className="text-sm text-muted-foreground">Suas respostas estão salvas.</p>
               </div>
             ) : (
               <div className="flex items-center gap-3 text-muted-foreground">

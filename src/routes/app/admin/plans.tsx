@@ -15,7 +15,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Check, Edit, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { showError, toast } from "@/lib/errors/feedback";
 
 export const Route = createFileRoute("/app/admin/plans")({
   head: () => ({ meta: [{ title: "Planos — Admin | Lecto" }] }),
@@ -80,7 +80,7 @@ function PlansPage() {
     },
     onError: (err: Error, _updated, context) => {
       if (context?.previous) queryClient.setQueryData(["admin-plans"], context.previous);
-      toast.error(`Erro ao atualizar plano: ${err.message}`);
+      showError(err);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-plans"] });

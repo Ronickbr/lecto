@@ -48,7 +48,7 @@ import {
   ChevronUp,
   ImagePlus,
 } from "lucide-react";
-import { toast } from "sonner";
+import { showError, toast } from "@/lib/errors/feedback";
 import { RichTextBody } from "@/components/rich-text";
 import { TEXT_IMAGES_BUCKET } from "@/components/rich-text-utils";
 
@@ -173,7 +173,7 @@ function TextsPage() {
       toast.success("Texto excluído");
       qc.invalidateQueries({ queryKey: ["texts"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => showError(e),
   });
 
   return (
@@ -365,9 +365,9 @@ function TextFormDialog({
   }
 
   async function uploadImage(file: File) {
-    if (hasImage) return toast.error("Cada texto pode ter apenas uma imagem");
-    if (!file.type.startsWith("image/")) return toast.error("Selecione um arquivo de imagem");
-    if (file.size > 5 * 1024 * 1024) return toast.error("A imagem deve ter no máximo 5 MB");
+    if (hasImage) return showError("Cada texto pode ter apenas uma imagem");
+    if (!file.type.startsWith("image/")) return showError("Selecione um arquivo de imagem");
+    if (file.size > 5 * 1024 * 1024) return showError("A imagem deve ter no máximo 5 MB");
     setUploading(true);
     try {
       const ext = file.name.split(".").pop()?.toLowerCase() || "png";
@@ -384,7 +384,7 @@ function TextFormDialog({
       setForm((f) => ({ ...f, body: next }));
       toast.success("Imagem inserida no texto");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha ao enviar imagem");
+      showError(e, { fallback: "Falha ao enviar imagem" });
     } finally {
       setUploading(false);
     }
@@ -442,7 +442,7 @@ function TextFormDialog({
       qc.invalidateQueries({ queryKey: ["text-detail", textId] });
       onClose();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => showError(e),
   });
 
   return (
@@ -612,7 +612,7 @@ function AiGenerateDialog({ onClose }: { onClose: () => void }) {
       qc.invalidateQueries({ queryKey: ["questions"] });
       onClose();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => showError(e),
   });
 
   return (
@@ -770,7 +770,7 @@ function TextDetailDialog({
       toast.success("Questão excluída");
       qc.invalidateQueries({ queryKey: ["text-detail", textId] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => showError(e),
   });
 
   const textSchoolId = data?.text?.school_id ?? schoolId ?? undefined;
@@ -1001,7 +1001,7 @@ function QuestionFormDialog({
       qc.invalidateQueries({ queryKey: ["questions"] });
       onClose();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => showError(e),
   });
 
   const setOption = (i: number, v: string) => {

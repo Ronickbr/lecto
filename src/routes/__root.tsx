@@ -13,6 +13,9 @@ import appCss from "../styles.css?url";
 import { supabase } from "@/integrations/supabase/client";
 import { stopImpersonation } from "@/lib/admin/impersonation";
 import { Toaster } from "@/components/ui/sonner";
+import { Button } from "@/components/ui/button";
+import { TriangleAlert } from "lucide-react";
+import { toUserError } from "@/lib/errors/to-user-error";
 
 function NotFoundComponent() {
   return (
@@ -24,12 +27,9 @@ function NotFoundComponent() {
           O endereço acessado não existe ou foi movido.
         </p>
         <div className="mt-6">
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Voltar ao início
-          </Link>
+          <Button asChild>
+            <Link to="/">Voltar ao início</Link>
+          </Button>
         </div>
       </div>
     </div>
@@ -39,30 +39,31 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
+  const friendly = toUserError(error);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold text-foreground">Erro ao carregar a página</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Algo deu errado. Tente novamente ou volte ao início.
-        </p>
+        <TriangleAlert className="mx-auto size-10 text-destructive" />
+        <h1 className="mt-4 text-xl font-semibold text-foreground">{friendly.title}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{friendly.message}</p>
+        {friendly.suggestion && (
+          <p className="mt-1 text-sm text-muted-foreground/80">
+            <span className="font-medium">Como resolver:</span> {friendly.suggestion}
+          </p>
+        )}
         <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <button
+          <Button
             onClick={() => {
               router.invalidate();
               reset();
             }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Tentar novamente
-          </button>
-          <a
-            href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-          >
-            Início
-          </a>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to="/">Início</Link>
+          </Button>
         </div>
       </div>
     </div>
