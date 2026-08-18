@@ -52,6 +52,7 @@ const ROLE_LABEL: Record<string, string> = {
   school_admin: "Admin escolar",
   teacher: "Professor",
   student: "Aluno",
+  no_role: "Sem papel",
 };
 
 type UserRow = {

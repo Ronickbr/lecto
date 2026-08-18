@@ -13,8 +13,9 @@ export interface GlobalUserRow {
 
 /**
  * Lista todos os usuários globais para o painel do super admin.
- * Usa service_role para ler `auth.users` (email é fonte canônica) e
- * `profiles`/`teachers`/`students` para o nome, sem depender de RLS.
+ * `auth.users` é a fonte canônica: TODO usuário cadastrado (Auth ou criação
+ * via service role) aparece, mesmo sem papel atribuído. Nome vem de
+ * `profiles`/`teachers`/`students`/metadata; papel vem de `user_roles`.
  */
 export const listGlobalUsersFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -27,14 +28,26 @@ export const listGlobalUsersFn = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const [rolesRes, profilesRes, teachersRes, studentsRes] = await Promise.all([
-      supabaseAdmin.from("user_roles").select("user_id, role, school_id, created_at"),
-      supabaseAdmin.from("profiles").select("id, full_name, email, created_at"),
-      supabaseAdmin.from("teachers").select("user_id, full_name, email, school_id, created_at"),
-      supabaseAdmin.from("students").select("id, full_name, school_id, created_at, user_id"),
+      supabaseAdmin.from("user_roles").select("user_id, role, school_id"),
+      supabaseAdmin.from("profiles").select("id, full_name, email"),
+      supabaseAdmin.from("teachers").select("user_id, full_name, email"),
+      supabaseAdmin.from("students").select("id, full_name, school_id, user_id"),
     ]);
 
-    const emailById = new Map<string, string | null>();
-    const nameById = new Map<string, string | null>();
+    const rolesByUser = new Map<string, { role: string; schoolId: string | null }[]>();
+    (rolesRes.data ?? []).forEach((r) => {
+      const arr = rolesByUser.get(r.user_id) ?? [];
+      arr.push({ role: r.role, schoolId: r.school_id });
+      rolesByUser.set(r.user_id, arr);
+    });
+
+    // Fonte canônica: todos os usuários do auth.users.
+    const authUsers: {
+      id: string;
+      email: string | null;
+      name: string | null;
+      createdAt: string;
+    }[] = [];
     const PER_PAGE = 200;
     for (let page = 1; page <= 10; page++) {
       const { data: pageRes } = await supabaseAdmin.auth.admin.listUsers({
@@ -43,59 +56,68 @@ export const listGlobalUsersFn = createServerFn({ method: "GET" })
       });
       if (!pageRes?.users.length) break;
       pageRes.users.forEach((u) => {
-        if (u.email) emailById.set(u.id, u.email);
         const meta = u.user_metadata as { full_name?: string; name?: string } | null;
-        const metaName = meta?.full_name ?? meta?.name ?? null;
-        if (metaName) nameById.set(u.id, metaName);
+        authUsers.push({
+          id: u.id,
+          email: u.email ?? null,
+          name: meta?.full_name ?? meta?.name ?? null,
+          createdAt: u.created_at ?? new Date().toISOString(),
+        });
       });
       if (pageRes.users.length < PER_PAGE) break;
     }
 
-    const identity = new Map<
-      string,
-      { name: string | null; email: string | null; createdAt: string }
-    >();
+    // Nome/email enriquecidos com profiles/teachers/students.
+    const identity = new Map<string, { name: string | null; email: string | null }>();
     (profilesRes.data ?? []).forEach((p) =>
-      identity.set(p.id, {
-        name: p.full_name ?? nameById.get(p.id) ?? null,
-        email: emailById.get(p.id) ?? p.email,
-        createdAt: p.created_at,
-      }),
+      identity.set(p.id, { name: p.full_name, email: p.email }),
     );
     (teachersRes.data ?? []).forEach((t) => {
       if (!t.user_id) return;
       const existing = identity.get(t.user_id);
       if (!existing || (!existing.name && !existing.email)) {
         identity.set(t.user_id, {
-          name: existing?.name ?? t.full_name ?? nameById.get(t.user_id) ?? null,
-          email: emailById.get(t.user_id) ?? existing?.email ?? t.email,
-          createdAt: existing?.createdAt ?? t.created_at,
+          name: existing?.name ?? t.full_name,
+          email: existing?.email ?? t.email,
         });
       }
     });
     (studentsRes.data ?? []).forEach((s) => {
       if (!s.user_id) return;
       const existing = identity.get(s.user_id);
-      if (!existing) {
-        identity.set(s.user_id, {
-          name: s.full_name ?? nameById.get(s.user_id) ?? null,
-          email: emailById.get(s.user_id) ?? null,
-          createdAt: s.created_at,
-        });
-      }
+      if (!existing) identity.set(s.user_id, { name: s.full_name, email: null });
     });
 
-    const staff = (rolesRes.data ?? []).map((r) => {
-      const id = identity.get(r.user_id);
-      return {
-        userId: r.user_id,
-        name: id?.name ?? nameById.get(r.user_id) ?? null,
-        email: emailById.get(r.user_id) ?? id?.email ?? null,
-        role: r.role,
-        schoolId: r.school_id,
-        createdAt: id?.createdAt ?? r.created_at,
-      };
-    });
+    const staff: GlobalUserRow[] = [];
+    for (const u of authUsers) {
+      const id = identity.get(u.id);
+      const roles = rolesByUser.get(u.id) ?? [];
+      const name = id?.name ?? u.name ?? null;
+      const email = u.email ?? id?.email ?? null;
+      if (roles.length === 0) {
+        // Cadastrado mas sem papel atribuído (ex.: signup antes do
+        // provisionamento) — aparece para o super admin poder agir.
+        staff.push({
+          userId: u.id,
+          name,
+          email,
+          role: "no_role",
+          schoolId: null,
+          createdAt: u.createdAt,
+        });
+        continue;
+      }
+      for (const r of roles) {
+        staff.push({
+          userId: u.id,
+          name,
+          email,
+          role: r.role,
+          schoolId: r.schoolId,
+          createdAt: u.createdAt,
+        });
+      }
+    }
 
     const studentRows = (studentsRes.data ?? [])
       .filter((s) => !s.user_id)
@@ -105,7 +127,7 @@ export const listGlobalUsersFn = createServerFn({ method: "GET" })
         email: null,
         role: "student",
         schoolId: s.school_id,
-        createdAt: s.created_at,
+        createdAt: new Date().toISOString(),
       }));
 
     return [...staff, ...studentRows] as GlobalUserRow[];
