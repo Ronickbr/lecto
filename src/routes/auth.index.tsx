@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { provisionSchoolAdminFn } from "@/lib/signup.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +31,7 @@ export const Route = createFileRoute("/auth/")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const provisionSchoolAdmin = useServerFn(provisionSchoolAdminFn);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -55,7 +58,7 @@ function AuthPage() {
     e.preventDefault();
     if (!email || !password || !fullName) return showError("Preencha todos os campos");
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -65,6 +68,21 @@ function AuthPage() {
     });
     setLoading(false);
     if (error) return showError(error);
+
+    // Confirmação de e-mail desativada: a sessão existe imediatamente, então
+    // provisiona a conta como administrador de escola (escola em trial + papel).
+    if (data.session) {
+      try {
+        await provisionSchoolAdmin();
+        toast.success("Conta criada — sua escola em Trial está pronta");
+        navigate({ to: "/app/school" });
+      } catch (err) {
+        showError(err, { fallback: "Conta criada, mas houve um erro ao configurar a escola" });
+        navigate({ to: "/app" });
+      }
+      return;
+    }
+
     toast.success("Conta criada — faça login");
   }
 
@@ -185,7 +203,8 @@ function AuthPage() {
                     Criar conta
                   </Button>
                   <p className="text-xs text-muted-foreground">
-                    O primeiro usuário registrado se torna administrador geral automaticamente.
+                    Ao criar a conta, você se torna administrador de escola em plano Trial: 1
+                    professor, 25 alunos e 5 simulados/mês.
                   </p>
                 </form>
               </TabsContent>
