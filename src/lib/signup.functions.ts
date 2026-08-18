@@ -2,9 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const ProvisionInput = z.object({
-  schoolName: z.string().trim().max(120).optional(),
-});
+const ProvisionInput = z
+  .object({
+    schoolName: z.string().trim().max(120).optional(),
+  })
+  .nullish()
+  .default({});
 
 /**
  * Provisiona uma conta criada diretamente pelo Auth como administrador de
