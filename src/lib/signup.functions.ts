@@ -1,5 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+
+const ProvisionInput = z.object({
+  schoolName: z.string().trim().max(120).optional(),
+});
 
 /**
  * Provisiona uma conta criada diretamente pelo Auth como administrador de
@@ -15,10 +20,10 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
  */
 export const provisionSchoolAdminFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .validator((raw: unknown) => ProvisionInput.parse(raw))
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Já provisionado (qualquer papel) → no-op.
     const { data: existingRoles } = await supabaseAdmin
       .from("user_roles")
       .select("id")
@@ -28,12 +33,19 @@ export const provisionSchoolAdminFn = createServerFn({ method: "POST" })
       return { ok: true, provisioned: false, schoolId: null };
     }
 
+    const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(context.userId);
+    const rawMeta = authUser?.user?.user_metadata ?? {};
+
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("full_name, email")
       .eq("id", context.userId)
       .maybeSingle();
-    const fullName = profile?.full_name ?? "Escola";
+
+    const profileFullName = profile?.full_name ?? null;
+    const metaFullName = typeof rawMeta.full_name === "string" ? rawMeta.full_name : null;
+    const emailPrefix = authUser?.user?.email ? authUser.user.email.split("@")[0] : null;
+    const fullName: string = profileFullName || metaFullName || emailPrefix || "Escola";
 
     const { data: trialPlan } = await supabaseAdmin
       .from("plans")
@@ -41,16 +53,27 @@ export const provisionSchoolAdminFn = createServerFn({ method: "POST" })
       .eq("tier", "free")
       .eq("active", true)
       .maybeSingle();
+    if (!trialPlan) {
+      throw new Error(
+        "Plano Trial (tier=free, active=true) não encontrado na tabela plans. " +
+          "Execute a migration 0027_trial_plan.sql ou insira o registro manualmente.",
+      );
+    }
 
-    const base = slugify(fullName) || "escola";
+    const schoolNameFromValidator = data?.schoolName?.trim() ?? "";
+    const schoolNameFromMeta = typeof rawMeta.school_name === "string" ? rawMeta.school_name.trim() : "";
+    const trimmedSchoolName = schoolNameFromValidator || schoolNameFromMeta;
+    const finalSchoolName = trimmedSchoolName || `Escola de ${fullName}`;
+
+    const base = slugify(trimmedSchoolName || fullName) || "escola";
     const slug = `${base}-${Date.now().toString(36).slice(-4)}${Math.random().toString(36).slice(2, 6)}`;
 
     const { data: school, error: sErr } = await supabaseAdmin
       .from("schools")
       .insert({
-        name: `Escola de ${fullName}`,
+        name: finalSchoolName,
         slug,
-        plan_id: trialPlan?.id ?? null,
+        plan_id: trialPlan.id,
         subscription_status: "trial",
         created_by: context.userId,
       })
@@ -65,12 +88,10 @@ export const provisionSchoolAdminFn = createServerFn({ method: "POST" })
     });
     if (roleErr) {
       await supabaseAdmin.from("schools").delete().eq("id", school.id);
-      throw new Error(`Falha ao atribuir papel: ${roleErr.message}`);
+      throw new Error(`Falha ao atribuir papel school_admin: ${roleErr.message}`);
     }
 
-    // Garante o perfil (a trigger handle_new_user normalmente já cria).
     if (!profile) {
-      const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(context.userId);
       await supabaseAdmin.from("profiles").upsert({
         id: context.userId,
         full_name: fullName,

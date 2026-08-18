@@ -36,6 +36,7 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [schoolName, setSchoolName] = useState("");
   const [checkingSession, setCheckingSession] = useState(true);
 
   // Sign in
@@ -57,13 +58,15 @@ function AuthPage() {
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
     if (!email || !password || !fullName) return showError("Preencha todos os campos");
+    const trimmedSchoolName = schoolName.trim();
+    if (!trimmedSchoolName) return showError("Informe o nome da escola para continuar.");
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/app`,
-        data: { full_name: fullName },
+        data: { full_name: fullName, school_name: trimmedSchoolName },
       },
     });
     setLoading(false);
@@ -73,7 +76,7 @@ function AuthPage() {
     // provisiona a conta como administrador de escola (escola em trial + papel).
     if (data.session) {
       try {
-        await provisionSchoolAdmin();
+        await provisionSchoolAdmin({ data: { schoolName: trimmedSchoolName } });
         toast.success("Conta criada — sua escola em Trial está pronta");
         navigate({ to: "/app/school" });
       } catch (err) {
@@ -176,6 +179,16 @@ function AuthPage() {
                       required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="school-name">Nome da escola</Label>
+                    <Input
+                      id="school-name"
+                      placeholder="Digite o nome da escola"
+                      required
+                      value={schoolName}
+                      onChange={(e) => setSchoolName(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
