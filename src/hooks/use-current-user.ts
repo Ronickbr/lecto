@@ -116,8 +116,9 @@ async function resolveSchoolId(userId: string, roleList: AppRole[]): Promise<str
   }
 
   try {
-    const { data: resolved, error: rpcErr } = await supabase
-      .rpc("user_school_id", { _user_id: userId });
+    const { data: resolved, error: rpcErr } = await supabase.rpc("user_school_id", {
+      _user_id: userId,
+    });
     if (!rpcErr) return (resolved as string | null) ?? null;
     console.warn(
       "RPC user_school_id indisponível (HTTP 404/Projeto sem migration aplicada), recaindo para SELECT direto via RLS:",
@@ -136,7 +137,9 @@ async function resolveSchoolId(userId: string, roleList: AppRole[]): Promise<str
     console.error("Falha ao resolver school_id por user_roles:", rowsErr);
     return null;
   }
-  const uniq = Array.from(new Set((rows ?? []).map((r) => r.school_id).filter(Boolean) as string[]));
+  const uniq = Array.from(
+    new Set((rows ?? []).map((r) => r.school_id).filter(Boolean) as string[]),
+  );
   if (uniq.length !== 1) return null;
   return uniq[0] ?? null;
 }

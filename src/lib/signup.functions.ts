@@ -64,7 +64,8 @@ export const provisionSchoolAdminFn = createServerFn({ method: "POST" })
     }
 
     const schoolNameFromValidator = data?.schoolName?.trim() ?? "";
-    const schoolNameFromMeta = typeof rawMeta.school_name === "string" ? rawMeta.school_name.trim() : "";
+    const schoolNameFromMeta =
+      typeof rawMeta.school_name === "string" ? rawMeta.school_name.trim() : "";
     const trimmedSchoolName = schoolNameFromValidator || schoolNameFromMeta;
     const finalSchoolName = trimmedSchoolName || `Escola de ${fullName}`;
 
